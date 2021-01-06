@@ -3,7 +3,7 @@
 from math import *
 import random
 from helpers import *
-from HexBugModel import *
+import LidarBotModel as model
 
 #==============================================================================
 #
@@ -30,7 +30,7 @@ def dumpPFConfig():
 #
 #==============================================================================
 class ParticleFilter:
-    def __init__(self, parms, start, turning_noise, distance_noise ):
+    def __init__(self, parms, turning_noise, distance_noise ):
         self.meas               = []
         self.particles          = []
         self.N                  = parms['numberOfParticles']
@@ -43,21 +43,12 @@ class ParticleFilter:
         heading = 0.0
         for i in range(self.N):
             tx,ty = self.PlaceParticle()
-            self.particles.append(particle(parms,x=tx,y=ty,heading=heading,myid=self.id))
+            self.particles.append(model.particle(parms,x=tx,y=ty,heading=heading,myid=self.id))
             self.particles[-1].setnoise(self.meas_noise, self.turning_noise, self.distance_noise)
             heading += heading_adder 
             self.id += 1
         self.meas.append(start)
         return
-
-    def PlaceParticle(self):
-        arena = self.parms['arena']
-        while(1):
-            x = int(random.random()*self.parms['arenaWidth'])
-            y = int(random.random()*self.parms['arenaHeight'])
-            if not arena.CheckXY(x,y):
-                break
-        return x,y
 
     # move particles
     # if predictOnly == 0
@@ -103,7 +94,7 @@ class ParticleFilter:
                 # Learn heading and distance
                 # Deep copy 100%-n% of the particles - X,Y,heading, distance are preserved - turning = 0.0 - weight is replaced
                 for z in range(len(np)-n):
-                        self.particles.append(particle(self.parms,x=np[z].x,y=np[z].y,heading=np[z].heading,turn=0.0,dist=np[z].distance,weight=nw[z],myid=np[z].id))
+                        self.particles.append(model.particle(self.parms,x=np[z].x,y=np[z].y,heading=np[z].heading,turn=0.0,dist=np[z].distance,weight=nw[z],myid=np[z].id))
                         self.particles[-1].setnoise(self.meas_noise, self.turning_noise, self.distance_noise)
 
                 # Replace a n% of the particles based on one of two strategies
@@ -119,7 +110,7 @@ class ParticleFilter:
                         n = z
                         # X,Y preserved - heading=average - turning,distance=random, weight=0
                         for i in range(n+1,len(np)):
-                                self.particles.append(particle(self.parms,x=np[i].x,y=np[i].y,heading=aa/c,weight=0.0,myid=np[i].id)) 
+                                self.particles.append(model.particle(self.parms,x=np[i].x,y=np[i].y,heading=aa/c,weight=0.0,myid=np[i].id)) 
                                 self.particles[-1].setnoise(self.meas_noise, self.turning_noise, self.distance_noise)
                 else:
                         # Strategy 1 - Randomly pick new heading and distance (preserving heading to provide momentum)
@@ -127,7 +118,7 @@ class ParticleFilter:
                         n = z
                         self.id += 1
                         for i in range(n+1,len(np)):
-                                self.particles.append(particle(self.parms,x=np[i].x,y=np[i].y,heading=np[i].heading, weight=0.0,myid=self.id))
+                                self.particles.append(model.particle(self.parms,x=np[i].x,y=np[i].y,heading=np[i].heading, weight=0.0,myid=self.id))
                                 self.particles[-1].setnoise(self.meas_noise, self.turning_noise, self.distance_noise)
 
         # Dump particles to console
