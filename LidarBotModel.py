@@ -1,7 +1,7 @@
 # Written by Eric Gregori
-from math import *
+import math
 import random
-
+import numpy as np
 
 #==============================================================================
 #
@@ -32,9 +32,14 @@ class Particle:
             self.distanceNoise      = parms['distanceSigmaNoise']    # Distance noise - sigma 
             self.robot_object       = robot_object              # None = this is a robot
 
-        def place(self):
+        def place(self, px = -1, py = -1, w = 50, h = 50, place_robot=False):
             # Dynamic aspects of the particle
-            x, y, heading           = self.__randomLocation()
+            if self.this_is_a_robot() and not place_robot:      # To avoid moving the robot by accident
+                return
+            if px < 0:
+                x, y, heading       = self.__randomLocation()
+            else:
+                x, y, heading       = self.__constrainedLocation(w, h, px, py)
             self.x                  = x                         # Initial position
             self.y                  = y
             self.heading            = heading                   # Initial heading
@@ -62,22 +67,24 @@ class Particle:
             if self.this_is_a_robot():
                 self.parms['robotPath'].append((int(self.x),int(self.y)))
             else:
-                self.__readLidar()
-
-        # Calculate a weight by comparing this particles lidar data with the robot's lidar data
-        def weight(self, robot_particle):
-            self.__readLidar()
-
-#               px = self.Gaussian(meas[0], self.meas_noise, self.x)
-#               py = self.Gaussian(meas[1], self.meas_noise, self.y)
+                self.__setWeight()
 
         def this_is_a_robot(self):
             return (self.robot_object == None)
 
+        # Calculate a weight by comparing this particles lidar data with the robot's lidar data
+        def __setWeight(self):
+            self.__readLidar()
+            result = np.corrcoef(np.array(self.robot_object.samples), np.array(self.samples))
+            if result[0][1] == result[1][0]:
+                self.weight = result[0][1]
+#               px = self.Gaussian(meas[0], self.meas_noise, self.x)
+#               py = self.Gaussian(meas[1], self.meas_noise, self.y)
+
         def __setNewHeading(self):
             max_distance = self.parms['lidarMaxDistance']
             samples = len(self.samples)
-            angle_sample = (2*pi)/samples
+            angle_sample = (2 * math.pi)/samples
             self.__readLidar()
             for right in range(int(samples/4)):
                 if self.samples[right] > (3*max_distance/4):
@@ -90,7 +97,6 @@ class Particle:
                 self.heading = self.__angletrunc(self.heading-(left*angle_sample))
             else:
                 self.heading = self.__angletrunc(self.heading+(right*angle_sample))
-            print(left,right,self.heading)
 
         def __getSample(self, px, py, heading):
             # send pulse from x,y towards heading, stop when hitting wall
@@ -105,17 +111,32 @@ class Particle:
             # Measure distance while incrementing heading.
             # Start scan at robot heading.
             scan = self.heading
-            angle_adder = (2*pi)/self.parms['lidarSamples']
+            angle_adder = (2 * math.pi)/self.parms['lidarSamples']
             for r in range(self.parms['lidarSamples']):
                 self.samples[r] = self.__getSample(self.x, self.y, scan)
                 scan = self.__angletrunc(scan + angle_adder)
+
+        # Width, Height, x, y 
+        def __constrainedLocation(self, w, h, x, y):
+            arena = self.parms['arena']
+            while(1):
+                x += int((random.random()*w) - w/2)
+                y += int((random.random()*h) - h/2)
+                x = max(0,x)
+                y = max(0,y)
+                x = min(x,self.parms['arenaWidth']-1)
+                y = min(y,self.parms['arenaHeight']-1)
+                h = random.random()*(2 * math.pi)
+                if not arena.CheckXY(x,y):
+                    break
+            return x,y,h
 
         def __randomLocation(self):
             arena = self.parms['arena']
             while(1):
                 x = int(random.random()*self.parms['arenaWidth'])
                 y = int(random.random()*self.parms['arenaHeight'])
-                h = random.random()*(2 * pi)
+                h = random.random()*(2 * math.pi)
                 if not arena.CheckXY(x,y):
                     break
             return x,y,h
@@ -123,17 +144,17 @@ class Particle:
         # Truncate angle - from robot class
         def __angletrunc(self,a):
                 while a < 0.0:
-                        a += pi * 2
-                return ((a + pi) % (pi * 2)) - pi
+                        a += math.pi * 2
+                return ((a + math.pi) % (math.pi * 2)) - math.pi
 
         # Gaussian - from robot class
         def __gaussian(self,mu, sigma, x):
                 # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
-                return exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / sqrt(2.0 * pi * (sigma ** 2))
+                return exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / sqrt(2.0 * math.pi * (sigma ** 2))
 
         def __move(self,x,y,d,heading):
-                x += d * cos(heading)
-                y += d * sin(heading)
+                x += d * math.cos(heading)
+                y += d * math.sin(heading)
                 return x,y
 
 
