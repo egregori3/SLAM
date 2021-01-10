@@ -32,6 +32,7 @@ class Particle:
             self.distanceNoise      = parms['distanceSigmaNoise']    # Distance noise - sigma 
             self.robot_object       = robot_object              # None = this is a robot
 
+        # After placement, the weight is valid
         def place(self, px = -1, py = -1, w = 50, h = 50, place_robot=False):
             # Dynamic aspects of the particle
             if self.this_is_a_robot() and not place_robot:      # To avoid moving the robot by accident
@@ -45,9 +46,16 @@ class Particle:
             self.heading            = heading                   # Initial heading
             self.weight             = 0.0                       # Initial weight
             self.samples            = [0] * self.parms['lidarSamples'] # List of samples representing distances
+            self.__readLidar()                                  # Update Lidar after placement
             if self.this_is_a_robot():
                 self.parms['robotPath'].append((int(x),int(y)))
+            else:
+                self.__setWeight()                              # Update particle weights
 
+        # Move particle
+        # Scan Lidar
+        # For particles, update weights
+        # After moving, the weight is valid
         def move(self):
             if not self.this_is_a_robot():                      # This is a particle
                 self.heading = self.robot_object.heading        # Set particle heading to robot heading
@@ -64,6 +72,8 @@ class Particle:
                     if self.this_is_a_robot():
                         self.__setNewHeading()
                     break
+            # After motion, update state information
+            self.__readLidar()
             if self.this_is_a_robot():
                 self.parms['robotPath'].append((int(self.x),int(self.y)))
             else:
@@ -74,7 +84,6 @@ class Particle:
 
         # Calculate a weight by comparing this particles lidar data with the robot's lidar data
         def __setWeight(self):
-            self.__readLidar()
             result = np.corrcoef(np.array(self.robot_object.samples), np.array(self.samples))
             if result[0][1] == result[1][0]:
                 self.weight = result[0][1]
@@ -85,7 +94,6 @@ class Particle:
             max_distance = self.parms['lidarMaxDistance']
             samples = len(self.samples)
             angle_sample = (2 * math.pi)/samples
-            self.__readLidar()
             for right in range(int(samples/4)):
                 if self.samples[right] > (3*max_distance/4):
                     break
