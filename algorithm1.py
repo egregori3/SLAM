@@ -1,10 +1,6 @@
 # Written by Eric Gregori
 
-from math import *
-import random
-from helpers import *
 import LidarBotModel as model
-import numpy as np
 
 #==============================================================================
 #
@@ -31,23 +27,38 @@ class ParticleFilter:
             p.move()
 
         # refresh dead particles
+        keepThreashold = 0.9
         weights = [p.weight for p in self.particles]
-        keep_indexes = [i for i in range(len(weights)) if weights[i] > 0.75]
+        keep_indexes = [i for i in range(len(weights)) if weights[i] > keepThreashold]
         numkeep = len(keep_indexes)
+        print("keep=%d"%(numkeep), end=" ")
         if numkeep > 0:
-            dump_indexes = [i for i in range(len(weights)) if weights[i] <= 0.75]
+            dump_indexes = [i for i in range(len(weights)) if weights[i] <= keepThreashold]
             numdump = len(dump_indexes)
-            i = keep_indexes[0]
-            c = 0
+            print("dump=%d"%(numdump), end=" ")
+            keep = 0
+            dump = 0
+            r = 0
             for d in dump_indexes:
-                self.particles[d].place(px=self.particles[i].x, py=self.particles[i].y)
-                c += 1
-                if c > (numdump+numkeep)/numkeep:
-                    i += 1
-                    c = 0
+                if keep < numkeep:
+                    ki = keep_indexes[keep]
+                    x=self.particles[ki].x
+                    y=self.particles[ki].y
+                    w=self.particles[ki].weight
+                    self.particles[d].place(px=x, py=y)
+                    if dump == 0: print("(%d,%d,%3f)"%(x,y,w), end="")
+                    dump += 1
+                    if dump >= int((numdump+numkeep)*0.1):
+                        keep += 1
+                        print("=%d"%(dump), end=" ")
+                        dump = 0
+                else:
+                    print("=%d"%(dump), end=" ")
+                    self.particles[d].place()
+                    r += 1
 
-            if numkeep > numdump:
-                print("keep = %d, dump = %d"%(numkeep, numdump))
+            print("rand=%d"%(r), end=" ")
+            if numkeep > int((numdump+numkeep)*0.9):
                 return True
 
         else:

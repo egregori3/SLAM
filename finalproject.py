@@ -22,7 +22,7 @@ from ast import literal_eval
 #==============================================================================
 def Config(parameters):
     # Simulation parameters
-    parameters['outputPath']                      = "Particles"
+    parameters['outputPath']                      = None
     parameters['arenaFilename']                   = ""
     parameters['dataFilename']                    = "data.txt"
     parameters['verbose']                         = False
@@ -52,13 +52,12 @@ def dumpConfig(parameters):
 #
 #==============================================================================
 def DisplayParticles(parameters, filename, pf):
-    wmax = pf.maxWeight()
-    image = display.Display(parameters['arena'].GetImage(),
-                            parameters['robotPath'],
-                            (parameters['displayStaticText'], parameters['displayDynamicText'])
-    image.addParticles(pf, wmax)
-    filename = parameters['outputPath']+"/"+filename
-    image.saveImage(filename)
+    if parameters['outputPath']:
+        wmax = pf.maxWeight()
+        image = display.Display(parameters)
+        image.addParticles(pf, wmax)
+        filename = parameters['outputPath']+"/"+filename
+        image.saveImage(filename)
 
 #==============================================================================
 #
@@ -80,12 +79,13 @@ def ParticleFilterSimulation(parms, robot):
         # Instantiate particle filter with N particles and inital position
         pf = alg.ParticleFilter(parms, robot)
         for i in range(parms['iterations']):
+            print("Iteration %d: robot(%d, %d)"%(i, int(robot.x), int(robot.y)), end=" ")
+            result = pf.update()
             wmax = pf.maxWeight()
             wavg = pf.avgWeight()
-            print("Iteration %d: robot %d, %d, %f, %f"%(i, int(robot.x), int(robot.y), wmax, wavg))
+            print("wmax=%f, wavg=%f"%(wmax, wavg))
             parms['displayDynamicText'].append(" wmax="+str(wmax))
             parms['displayDynamicText'].append(" wavg="+str(wavg))
-            result = pf.update()
             DisplayParticles(parms,"/looking" + str(i) + ".jpg", pf)
             if result:
                 break
@@ -104,6 +104,7 @@ def main(argv):
         opts, args = getopt.getopt(argv, "vi:o:a:d:p:")
     except getopt.GetoptError:
         print("!ERROR! Illegal parameter")
+        print("-v verbose -o outputPath -a arenaFilename -i iterations -d dataFilename -p numberOfParticles")
         sys.exit(1)
     for opt, arg in opts:
         if opt in ("-v"):  # -v verbose

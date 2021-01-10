@@ -10,10 +10,11 @@ import helpers
 #==============================================================================
 class Display:
 
-    def __init__(self, image, robot_path, text_array):
-        self.__image = image.copy()
-        self.addLine(robot_path)
-        self.addText(text_array)
+    def __init__(self, parameters):
+        self.parms = parameters
+        self.__image = parameters['arena'].GetImage().copy()
+        self.addLine(parameters['robotPath'])
+        self.addText()
 
     def addLine(self, points):
         if len(points) > 1:
@@ -30,12 +31,13 @@ class Display:
                     color = helpers.colorBetween((0,0,255), (0,255,0), p.weight/wmax)
             cv2.circle(self.__image, (int(p.x), int(p.y)), 4, color, -1)
 
-    def addText(self, text_array):
+    def addText(self):
         text = ""
-        for field in text_array[0]: # Static text
+        for field in self.parms['displayStaticText']:
             text += (field+" ")
-        for field in text_array[1]: # Dynamic text
+        for field in self.parms['displayDynamicText']:
             text += (field+" ")
+        self.parms['displayDynamicText'] = list()
         font = cv2.FONT_HERSHEY_SIMPLEX
         org = (50, 50)
         fontScale = 1
@@ -43,7 +45,6 @@ class Display:
         thickness = 2
         image = cv2.putText(self.__image, text, org, font,
                    fontScale, color, thickness, cv2.LINE_AA) 
-        text_array[1] = "" # Reset dynamic text
 
     def saveImage(self,filename):
         cv2.imwrite(filename, self.__image)
