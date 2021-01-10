@@ -12,6 +12,7 @@ import arena
 import cv2
 import numpy as np
 import display
+import DataLogger
 from ast import literal_eval
 
 
@@ -22,9 +23,12 @@ from ast import literal_eval
 #==============================================================================
 def Config(parameters):
     # Simulation parameters
-    parameters['outputPath']                      = None
+    parameters['outputPath']                      = ""
     parameters['arenaFilename']                   = ""
-    parameters['dataFilename']                    = "data.txt"
+    parameters['dataFilename']                    = ""
+    parameters['plotFilename']                    = ""
+
+    parameters['plotGraphics']                    = False
     parameters['verbose']                         = False
     parameters['simulations']                     = 1        # Number of simulations
     parameters['iterations']                      = 10       # Number of times the robot is moved
@@ -52,18 +56,19 @@ def dumpConfig(parameters):
 #
 #==============================================================================
 def DisplayParticles(parameters, filename, pf):
-    if parameters['outputPath']:
+    if parameters['plotGraphics']:
         wmax = pf.maxWeight()
-        image = display.Display(parameters)
-        image.addParticles(pf, wmax)
         filename = parameters['outputPath']+"/"+filename
-        image.saveImage(filename)
+        image = display.Display(parameters, pf, wmax, filename)
 
 #==============================================================================
 #
-# Dump data to a csv file
+# Plot sample data
 #
 #==============================================================================
+def PlotParticleSamples(parms):
+    #plotSamples(self, particle_list, title)
+    pass
 
 #==============================================================================
 #
@@ -83,29 +88,55 @@ def ParticleFilterSimulation(parms, robot):
             result = pf.update()
             wmax = pf.maxWeight()
             wavg = pf.avgWeight()
-            print("wmax=%f, wavg=%f"%(wmax, wavg))
-            parms['displayDynamicText'].append(" wmax="+str(wmax))
-            parms['displayDynamicText'].append(" wavg="+str(wavg))
+            predicted_x, predicted_y = pf.avgXY()
+            distance = helpers.distance_between((predicted_x, predicted_y),(robot.x,robot.y))
+            print("wmax=%f, wavg=%f"%(wmax, wavg), end=" ")
+            print("pred(%d,%d)"%(predicted_x, predicted_y), end=" ")
+            print("dist=%d" % distance, end=" ")
+            parms['displayDynamicText'].append("wavg=%.2f" % wavg)
+            parms['displayDynamicText'].append("pred(%d,%d)" % (predicted_x, predicted_y))
+            parms['displayDynamicText'].append("dist=%d" % distance)
             DisplayParticles(parms,"/looking" + str(i) + ".jpg", pf)
+            print("\n")
             if result:
                 break
 
+#==============================================================================
+#
+# Place the robot into the arena
+#
+#==============================================================================
 def PlaceRobot(parameters):
     parameters['robotPath'] = []
     robot = model.Particle(parms=parameters)
     robot.place(place_robot=True)
+    try:
+        parameters['dataLoggerObject'].plotSamples([robot], "Robot")
+    except KeyError:
+        pass
     return robot
+
+#==============================================================================
+#
+# main
+#
+#==============================================================================
+def usage():
+    print("!ERROR! Illegal parameter")
+    print("-a arenaFilename -i iterations -p numberOfParticles")
+    print("[-v verbose] [-o outputPath] [-d dataFilename] [-m plotFilename] [-g output graphics]")
+    print("-o must be specified with -d")
+    print("-o must be specified with -m")
+    print("-o must be specified with -g")
+    sys.exit(1)
 
 def main(argv):
     parameters = dict()
     Config(parameters)
-    print(__doc__)
     try:
-        opts, args = getopt.getopt(argv, "vi:o:a:d:p:")
+        opts, args = getopt.getopt(argv, "vgi:o:a:d:p:m:")
     except getopt.GetoptError:
-        print("!ERROR! Illegal parameter")
-        print("-v verbose -o outputPath -a arenaFilename -i iterations -d dataFilename -p numberOfParticles")
-        sys.exit(1)
+        usage()
     for opt, arg in opts:
         if opt in ("-v"):  # -v verbose
             parameters['verbose']           = True
@@ -119,13 +150,42 @@ def main(argv):
             parameters['dataFilename']      = arg
         elif opt in ("-p"):
             parameters['numberOfParticles'] = int(arg)
+        elif opt in ("-m"):
+            parameters['plotFilename']      = arg
+        elif opt in ("-g"):
+            parameters['plotGraphics']      = True
+
+    # Test command line parameters
+    try:
+        print("arenaFilename       = "+parameters['arenaFilename'])
+        print("Number of particles = "+str(parameters['numberOfParticles']))
+        print("iterations          = "+str(parameters['iterations']))
+        if parameters['plotGraphics']: 
+            print("Graphics output enabled")
+        if 'plotFilename' in parameters: 
+            print("Plotting output enabled")
+    except KeyError:
+        usage()
+    print()
+    print()
+    if'dataFilename' in parameters and not 'outputPath' in parameters:
+        print("!ERROR! -o must be specified with -d")
+        usage()
+    if'plotFilename' in parameters and not 'outputPath' in parameters:
+        print("!ERROR! -o must be specified with -m")
+        usage()
+    if'plotGraphics' in parameters and not 'outputPath' in parameters:
+        print("!ERROR! -o must be specified with -g")
+        usage()
 
     parameters['displayStaticText'] = ["p="+str(parameters['numberOfParticles'])]
     parameters['arena'] = arena.Arena(parameters)
+    parameters['dataLoggerObject'] = DataLogger.DataLogger(parameters)
+    if parameters['dataFilename']: parameters['dataLoggerObject'].startDataLogger()
+
     robot = PlaceRobot(parameters)
     dumpConfig(parameters)
     ParticleFilterSimulation(parameters, robot)
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

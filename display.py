@@ -10,11 +10,13 @@ import helpers
 #==============================================================================
 class Display:
 
-    def __init__(self, parameters):
+    def __init__(self, parameters, pf, wmax, filename):
         self.parms = parameters
         self.__image = parameters['arena'].GetImage().copy()
-        self.addLine(parameters['robotPath'])
         self.addText()
+        self.addParticles(pf, wmax)
+        self.addLine(parameters['robotPath'])
+        self.saveImage(filename)
 
     def addLine(self, points):
         if len(points) > 1:
@@ -22,14 +24,16 @@ class Display:
                 cv2.line(self.__image,(points[i][0],points[i][1]),(points[i+1][0],points[i+1][1]),(128,128,128),2)
 
     def addParticles(self, pf, wmax):
+        p_robot = None
         for p in pf.particles:
             if p.this_is_a_robot():
-                color = (255,0,0)
+                color = (255,255,0)
+                p_robot = p
             else:
-                color = (0,0,255)
                 if wmax > 0:
                     color = helpers.colorBetween((0,0,255), (0,255,0), p.weight/wmax)
             cv2.circle(self.__image, (int(p.x), int(p.y)), 4, color, -1)
+        cv2.circle(self.__image, (int(p_robot.x), int(p_robot.y)), 6, (255,255,0), -1)
 
     def addText(self):
         text = ""
@@ -41,8 +45,8 @@ class Display:
         font = cv2.FONT_HERSHEY_SIMPLEX
         org = (50, 50)
         fontScale = 1
-        color = (255, 0, 0) 
-        thickness = 2
+        color = (196, 196, 196) 
+        thickness = 1
         image = cv2.putText(self.__image, text, org, font,
                    fontScale, color, thickness, cv2.LINE_AA) 
 

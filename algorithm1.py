@@ -58,7 +58,7 @@ class ParticleFilter:
                     r += 1
 
             print("rand=%d"%(r), end=" ")
-            if numkeep > int((numdump+numkeep)*0.9):
+            if numkeep > int((numdump+numkeep)*0.99):
                 return True
 
         else:
@@ -70,13 +70,26 @@ class ParticleFilter:
     def maxWeight(self):
         wmax = 0.0
         for p in self.particles:
-            if p.weight > wmax:
-                wmax = p.weight
+            if not p.this_is_a_robot():
+                if p.weight > wmax:
+                    wmax = p.weight
         return wmax
 
     def avgWeight(self):
         avg = 0.0
         for p in self.particles:
-            avg += p.weight
+            if not p.this_is_a_robot():
+                avg += p.weight
         return avg / len(self.particles)
+
+    def avgXY(self):
+        x = 0.0
+        y = 0.0
+        n = 0
+        for p in self.particles:
+            if not p.this_is_a_robot():
+                x += (p.weight * p.x)
+                y += (p.weight * p.y)
+                n += 1
+        return int(x/n), int(y/n)
 
