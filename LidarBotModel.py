@@ -37,20 +37,29 @@ class Particle:
                 self.text = "P"+str(myid)
 
         # After placement, the weight is valid
-        def place(self, px = -1, py = -1, w = 50, h = 50, place_robot=False):
+        def place(self, cmd_dict):
             # Dynamic aspects of the particle
-            if self.this_is_a_robot() and not place_robot:      # To avoid moving the robot by accident
-                return
-            if px < 0:
-                x, y, heading       = self.__randomLocation()
-            else:
+            if 'constrainedRandom' in cmd_dict:
+                p = cmd_dict['constrainedRandom']
+                px = p[0]
+                py = p[1]
+                w  = p[2] 
+                h  = p[3]
                 x, y, heading       = self.__constrainedLocation(w, h, px, py)
+            elif 'setPosition' in cmd_dict:
+                p = cmd_dict['setPosition']
+                x = p[0]
+                y = p[1]
+                heading = p[2]
+            else:
+                x, y, heading       = self.__randomLocation()
+
             self.x                  = x                         # Initial position
             self.y                  = y
             if self.this_is_a_robot():
-                self.heading        = heading                   # Initial heading
+                self.heading        = heading                   # Set robot
             else:
-                self.heading        = self.robot_object.heading # Initial heading
+                self.heading        = self.robot_object.heading # Partical is always robot heading
             self.weight             = 0.0                       # Initial weight
             self.samples            = [0] * self.parms['lidarSamples'] # List of samples representing distances
             self.__readLidar()                                  # Update Lidar after placement

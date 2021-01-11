@@ -14,15 +14,16 @@ class ParticleFilter:
         self.robot              = robot
         self.numparticles       = parms['numberOfParticles']
         myid                    = 0
+        self.particles.append(robot) # The robot MUST move first
         for i in range(self.numparticles):
             self.particles.append(model.Particle(parms, myid=myid, robot_object=robot))
             p = self.particles[-1]
             while(1):
-                p.place(px=robot.x, py=robot.y, w=10, h=10)
+                data = (robot.x, robot.y, 20, 20)
+                p.place({'constrainedRandom':data})
                 print("x=%d, y=%d, h=%f, w=%f"%(p.x, p.y, p.heading, p.weight))
                 if p.weight > 0.75: break
             myid += 1
-        self.particles.append(robot)
 
     # move particles
     def update(self):
@@ -33,7 +34,7 @@ class ParticleFilter:
 
         # refresh dead particles
         keepThreashold = 0.9
-        weights = [p.weight for p in self.particles]
+        weights = [p.weight for p in self.particles if not p.this_is_a_robot()]
         keep_indexes = [i for i in range(len(weights)) if weights[i] > keepThreashold]
         numkeep = len(keep_indexes)
         print("keep=%d"%(numkeep), end=" ")
@@ -50,7 +51,8 @@ class ParticleFilter:
                     x=self.particles[ki].x
                     y=self.particles[ki].y
                     w=self.particles[ki].weight
-                    self.particles[d].place(px=x, py=y)
+                    data = (x, y, 50, 50)
+                    p.place({'constrainedRandom':data})
                     if dump == 0: print("(%d,%d,%3f)"%(x,y,w), end="")
                     dump += 1
                     if dump >= int((numdump+numkeep)*0.1):
@@ -59,7 +61,7 @@ class ParticleFilter:
                         dump = 0
                 else:
                     print("=%d"%(dump), end=" ")
-                    self.particles[d].place()
+                    self.particles[d].place({})
                     r += 1
 
             print("rand=%d"%(r), end=" ")
@@ -68,7 +70,7 @@ class ParticleFilter:
 
         else:
             for p in self.particles:
-                p.place()
+                p.place({})
 
         return False
 

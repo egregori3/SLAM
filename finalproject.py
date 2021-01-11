@@ -101,10 +101,16 @@ def ParticleFilterSimulation(parms, robot):
 # Place the robot into the arena
 #
 #==============================================================================
-def PlaceRobot(parameters):
-    parameters['robotPath'] = []
-    robot = model.Particle(parms=parameters)
-    robot.place(place_robot=True)
+def PlaceRobot(parms):
+    parms['robotPath'] = []
+    robot = model.Particle(parms=parms)
+    if 'robotX' not in parms:
+        robot.place({})
+    else:
+        data = (parms['robotX'], parms['robotY'], parms['robotH'])
+        p = {'setPosition':data}
+        robot.place(p)
+    print("Robot initial state (x = %d, y = %d, h = %f"%(robot.x, robot.y, robot.heading))
     return robot
 
 #==============================================================================
@@ -125,7 +131,7 @@ def main(argv):
     parameters = dict()
     Config(parameters)
     try:
-        opts, args = getopt.getopt(argv, "vgi:o:a:d:p:m:")
+        opts, args = getopt.getopt(argv, "vgi:o:a:d:p:m:x:y:h:")
     except getopt.GetoptError:
         usage()
     for opt, arg in opts:
@@ -145,6 +151,12 @@ def main(argv):
             parameters['plotSamples']       = True
         elif opt in ("-g"):
             parameters['plotGraphics']      = True
+        elif opt in ("-x"):
+            parameters['robotX']            = int(arg)
+        elif opt in ("-y"):
+            parameters['robotY']            = int(arg)
+        elif opt in ("-h"):
+            parameters['robotH']            = float(arg)
 
     # Test command line parameters
     try:

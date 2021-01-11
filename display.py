@@ -24,15 +24,18 @@ class Display:
                 cv2.line(self.__image,(points[i][0],points[i][1]),(points[i+1][0],points[i+1][1]),(128,128,128),2)
 
     def addParticles(self, pf, wmax):
-        p_robot = None
+        # The robot mUST be the first particle because it needs to move first
+        robot_color = (255,255,0)
+        default_particle_color = (0,0,255)
         for p in pf.particles:
             if p.this_is_a_robot():
-                color = (255,255,0)
-                p_robot = p
+                color = robot_color
             else:
+                color = default_particle_color
                 if wmax > 0:
                     color = helpers.colorBetween((0,0,255), (0,255,0), p.weight/wmax)
             cv2.circle(self.__image, (int(p.x), int(p.y)), 4, color, -1)
+        cv2.circle(self.__image, (int(pf.particles[0].x), int(pf.particles[0].y)), 6, robot_color, -1)
 
     def addText(self):
         text = ""
