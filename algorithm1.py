@@ -15,15 +15,21 @@ class ParticleFilter:
         self.numparticles       = parms['numberOfParticles']
         myid                    = 0
         self.particles.append(robot) # The robot MUST move first
+        print("Placing initial particles")
         for i in range(self.numparticles):
             self.particles.append(model.Particle(parms, myid=myid, robot_object=robot))
             p = self.particles[-1]
-            while(1):
-                data = (robot.x, robot.y, 20, 20)
-                p.place({'constrainedRandom':data})
-                print("x=%d, y=%d, h=%f, w=%f"%(p.x, p.y, p.heading, p.weight))
-                if p.weight > 0.75: break
+            self.placeByWeight(p)
+            print("*", end="", flush=True)
             myid += 1
+        print()
+        print("Placed %d particles"%self.numparticles)
+
+    def placeByWeight(self, particle):
+        weight = 0.0
+        while(weight < 0.75):
+            particle.place({})
+            weight = particle.weight
 
     # move particles
     def update(self):

@@ -106,8 +106,15 @@ def PlaceRobot(parms):
     robot = model.Particle(parms=parms)
     if 'robotX' not in parms:
         robot.place({})
+        # Drive robot to valid weight
+        while(robot.valid_weight() == False):
+            robot.move()
     else:
-        data = (parms['robotX'], parms['robotY'], parms['robotH'])
+        try:
+            data = (parms['robotX'], parms['robotY'], parms['robotH'])
+        except KeyError:
+            print("!ERROR! You must specify y and h with x")
+            usage()
         p = {'setPosition':data}
         robot.place(p)
     print("Robot initial state (x = %d, y = %d, h = %f"%(robot.x, robot.y, robot.heading))

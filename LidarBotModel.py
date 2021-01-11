@@ -98,6 +98,13 @@ class Particle:
         def this_is_a_robot(self):
             return (self.robot_object == None)
 
+        # if the lidar data is all max, the weight is not valid
+        def valid_weight(self):
+            for sample in self.samples:
+                if sample < self.parms['lidarMaxDistance']-2:
+                    return True
+            return False
+
         # Calculate a weight by comparing this particles lidar data with the robot's lidar data
         def __setWeight(self):
             result = np.corrcoef(np.array(self.robot_object.samples), np.array(self.samples))
