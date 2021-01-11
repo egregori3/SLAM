@@ -22,20 +22,11 @@ from ast import literal_eval
 #
 #==============================================================================
 def Config(parameters):
-    # Simulation parameters
-    parameters['outputPath']                      = ""
-    parameters['arenaFilename']                   = ""
-    parameters['dataFilename']                    = ""
-    parameters['plotFilename']                    = ""
-
     parameters['plotGraphics']                    = False
+    parameters['plotSamples']                     = False
     parameters['verbose']                         = False
     parameters['simulations']                     = 1        # Number of simulations
-    parameters['iterations']                      = 10       # Number of times the robot is moved
     parameters['displayDynamicText']              = list()
-
-    # Particle filter parameters
-    parameters['numberOfParticles']               = 100      # Number of particles
 
     # Robot model parameters
     parameters['measurementSigmaNoise']           = 2.0      # Sigma for measurement noise
@@ -52,14 +43,18 @@ def dumpConfig(parameters):
 
 #==============================================================================
 #
-# Display partices
+# OutputData
 #
 #==============================================================================
-def DisplayParticles(parameters, filename, pf):
+def OutputData(parameters, index, pf):
     if parameters['plotGraphics']:
+        filename = parameters['outputPath']+"/iteration" + str(index)
         wmax = pf.maxWeight()
-        filename = parameters['outputPath']+"/"+filename
         image = display.Display(parameters, pf, wmax, filename)
+    if parameters['plotSamples']:
+        filename = parameters['outputPath']+"/lidar" + str(index)
+        parameters['dataLoggerObject'].plotSamples(pf.particles, filename)
+
 
 #==============================================================================
 #
@@ -96,7 +91,7 @@ def ParticleFilterSimulation(parms, robot):
             parms['displayDynamicText'].append("wavg=%.2f" % wavg)
             parms['displayDynamicText'].append("pred(%d,%d)" % (predicted_x, predicted_y))
             parms['displayDynamicText'].append("dist=%d" % distance)
-            DisplayParticles(parms,"/looking" + str(i) + ".jpg", pf)
+            OutputData(parms, i, pf)
             print("\n")
             if result:
                 break
@@ -110,10 +105,6 @@ def PlaceRobot(parameters):
     parameters['robotPath'] = []
     robot = model.Particle(parms=parameters)
     robot.place(place_robot=True)
-    try:
-        parameters['dataLoggerObject'].plotSamples([robot], "Robot")
-    except KeyError:
-        pass
     return robot
 
 #==============================================================================
@@ -124,7 +115,7 @@ def PlaceRobot(parameters):
 def usage():
     print("!ERROR! Illegal parameter")
     print("-a arenaFilename -i iterations -p numberOfParticles")
-    print("[-v verbose] [-o outputPath] [-d dataFilename] [-m plotFilename] [-g output graphics]")
+    print("[-v verbose] [-o outputPath] [-d dataFilename] [-m plot samples] [-g output graphics]")
     print("-o must be specified with -d")
     print("-o must be specified with -m")
     print("-o must be specified with -g")
@@ -151,37 +142,40 @@ def main(argv):
         elif opt in ("-p"):
             parameters['numberOfParticles'] = int(arg)
         elif opt in ("-m"):
-            parameters['plotFilename']      = arg
+            parameters['plotSamples']       = True
         elif opt in ("-g"):
             parameters['plotGraphics']      = True
 
     # Test command line parameters
     try:
         print("arenaFilename       = "+parameters['arenaFilename'])
+        if 'outputPath' in parameters:
+            print("outputPath          = "+parameters['outputPath'])
         print("Number of particles = "+str(parameters['numberOfParticles']))
         print("iterations          = "+str(parameters['iterations']))
         if parameters['plotGraphics']: 
             print("Graphics output enabled")
-        if 'plotFilename' in parameters: 
-            print("Plotting output enabled")
+        if parameters['plotSamples']: 
+            print("Sample plotting output enabled")
     except KeyError:
         usage()
     print()
     print()
-    if'dataFilename' in parameters and not 'outputPath' in parameters:
+    if 'dataFilename' in parameters and not 'outputPath' in parameters:
         print("!ERROR! -o must be specified with -d")
         usage()
-    if'plotFilename' in parameters and not 'outputPath' in parameters:
+    if parameters['plotSamples'] and not 'outputPath' in parameters:
         print("!ERROR! -o must be specified with -m")
         usage()
-    if'plotGraphics' in parameters and not 'outputPath' in parameters:
+    if parameters['plotGraphics'] and not 'outputPath' in parameters:
         print("!ERROR! -o must be specified with -g")
         usage()
 
     parameters['displayStaticText'] = ["p="+str(parameters['numberOfParticles'])]
     parameters['arena'] = arena.Arena(parameters)
     parameters['dataLoggerObject'] = DataLogger.DataLogger(parameters)
-    if parameters['dataFilename']: parameters['dataLoggerObject'].startDataLogger()
+    if 'dataFilename' in parameters: 
+        parameters['dataLoggerObject'].startDataLogger()
 
     robot = PlaceRobot(parameters)
     dumpConfig(parameters)

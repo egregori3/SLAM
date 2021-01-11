@@ -33,7 +33,6 @@ class Display:
                 if wmax > 0:
                     color = helpers.colorBetween((0,0,255), (0,255,0), p.weight/wmax)
             cv2.circle(self.__image, (int(p.x), int(p.y)), 4, color, -1)
-        cv2.circle(self.__image, (int(p_robot.x), int(p_robot.y)), 6, (255,255,0), -1)
 
     def addText(self):
         text = ""
@@ -51,4 +50,4 @@ class Display:
                    fontScale, color, thickness, cv2.LINE_AA) 
 
     def saveImage(self,filename):
-        cv2.imwrite(filename, self.__image)
+        cv2.imwrite(filename+".jpg", self.__image)

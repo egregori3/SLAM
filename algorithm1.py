@@ -14,17 +14,22 @@ class ParticleFilter:
         self.robot              = robot
         self.numparticles       = parms['numberOfParticles']
         myid                    = 0
-        self.particles.append(robot)
         for i in range(self.numparticles):
             self.particles.append(model.Particle(parms, myid=myid, robot_object=robot))
-            self.particles[-1].place()
+            p = self.particles[-1]
+            while(1):
+                p.place(px=robot.x, py=robot.y, w=10, h=10)
+                print("x=%d, y=%d, h=%f, w=%f"%(p.x, p.y, p.heading, p.weight))
+                if p.weight > 0.75: break
             myid += 1
+        self.particles.append(robot)
 
     # move particles
     def update(self):
         # move particles
         for p in self.particles:
             p.move()
+        return
 
         # refresh dead particles
         keepThreashold = 0.9
@@ -77,10 +82,12 @@ class ParticleFilter:
 
     def avgWeight(self):
         avg = 0.0
+        n  = 0
         for p in self.particles:
             if not p.this_is_a_robot():
                 avg += p.weight
-        return avg / len(self.particles)
+                n += 1
+        return avg / n
 
     def avgXY(self):
         x = 0.0

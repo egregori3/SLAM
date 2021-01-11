@@ -31,6 +31,10 @@ class Particle:
             self.headingNoise       = parms['headingSigmaNoise']     # Heading noise - sigma  
             self.distanceNoise      = parms['distanceSigmaNoise']    # Distance noise - sigma 
             self.robot_object       = robot_object              # None = this is a robot
+            if robot_object == None:
+                self.text = "Robot"
+            else:
+                self.text = "P"+str(myid)
 
         # After placement, the weight is valid
         def place(self, px = -1, py = -1, w = 50, h = 50, place_robot=False):
@@ -43,7 +47,10 @@ class Particle:
                 x, y, heading       = self.__constrainedLocation(w, h, px, py)
             self.x                  = x                         # Initial position
             self.y                  = y
-            self.heading            = heading                   # Initial heading
+            if self.this_is_a_robot():
+                self.heading        = heading                   # Initial heading
+            else:
+                self.heading        = self.robot_object.heading # Initial heading
             self.weight             = 0.0                       # Initial weight
             self.samples            = [0] * self.parms['lidarSamples'] # List of samples representing distances
             self.__readLidar()                                  # Update Lidar after placement
