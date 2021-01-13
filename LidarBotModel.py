@@ -107,6 +107,7 @@ class Particle:
 
         # Calculate a weight by comparing this particles lidar data with the robot's lidar data
         def __setWeight(self):
+            if not self.valid_weight(): return -2
             result = np.corrcoef(np.array(self.robot_object.samples), np.array(self.samples))
             if result[0][1] == result[1][0]:
                 self.weight = result[0][1]
@@ -150,7 +151,7 @@ class Particle:
         # Width, Height, x, y 
         def __constrainedLocation(self, w, h, x, y):
             arena = self.parms['arena']
-            while(1):
+            for i in range(10):
                 x += int((random.random()*w) - w/2)
                 y += int((random.random()*h) - h/2)
                 x = max(0,x)

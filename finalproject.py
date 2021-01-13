@@ -27,6 +27,7 @@ def Config(parameters):
     parameters['verbose']                         = False
     parameters['simulations']                     = 1        # Number of simulations
     parameters['displayDynamicText']              = list()
+    parameters['arenaRegion']                     = 50
 
     # Robot model parameters
     parameters['measurementSigmaNoise']           = 2.0      # Sigma for measurement noise
@@ -78,7 +79,8 @@ def ParticleFilterSimulation(parms, robot):
 
         # Instantiate particle filter with N particles and inital position
         pf = alg.ParticleFilter(parms, robot)
-        for i in range(parms['iterations']):
+        OutputData(parms, 0, pf)
+        for i in range(1, parms['iterations']):
             print("Iteration %d: robot(%d, %d)"%(i, int(robot.x), int(robot.y)), end=" ")
             result = pf.update()
             wmax = pf.maxWeight()
