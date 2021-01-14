@@ -27,7 +27,7 @@ def Config(parameters):
     parameters['verbose']                         = False
     parameters['simulations']                     = 1        # Number of simulations
     parameters['displayDynamicText']              = list()
-    parameters['arenaRegion']                     = 50
+    parameters['arenaRegion']                     = 10
 
     # Robot model parameters
     parameters['measurementSigmaNoise']           = 2.0      # Sigma for measurement noise
@@ -51,6 +51,7 @@ def OutputData(parameters, index, pf):
     if parameters['plotGraphics']:
         filename = parameters['outputPath']+"/iteration" + str(index)
         wmax = pf.maxWeight()
+        print("Output %s"%(filename))
         image = display.Display(parameters, pf, wmax, filename)
     if parameters['plotSamples']:
         filename = parameters['outputPath']+"/lidar" + str(index)
@@ -80,6 +81,7 @@ def ParticleFilterSimulation(parms, robot):
         # Instantiate particle filter with N particles and inital position
         pf = alg.ParticleFilter(parms, robot)
         OutputData(parms, 0, pf)
+        return
         for i in range(1, parms['iterations']):
             print("Iteration %d: robot(%d, %d)"%(i, int(robot.x), int(robot.y)), end=" ")
             result = pf.update()

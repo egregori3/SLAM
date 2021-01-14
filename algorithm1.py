@@ -20,6 +20,7 @@ class ParticleFilter:
         pid                     = 0
         self.particles.append(robot) # The robot MUST move first
         particles = []
+        return
         for i in range(self.numparticles):
             particles.append(model.Particle(parms, myid=i, robot_object=robot))
         print("Placing initial particles")
