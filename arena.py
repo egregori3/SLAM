@@ -41,7 +41,7 @@ class Arena:
                     (  0,1  ), # 1101 - put into 4
                     (  1,1  ), # 1110 - put into 8
                     (0.5,0.5)] # 1111 - put into middle
-        self.outer_scan         = [self.__boundary(0,0,parameters['lidarMaxDistance'],angle) for angle in range(2*PI, PI/16)]
+        self.outer_scan = [self.__boundary(0,0,parameters['lidarMaxDistance'],angle) for angle in range(2*PI, PI/16)]
         self.valid_regions = self.__getValidRegions()
 
     def GetImage(self): return self.__image
