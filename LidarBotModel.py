@@ -67,6 +67,7 @@ class Particle:
                 self.parms['robotPath'].append((int(x),int(y)))
             else:
                 self.__setWeight()                              # Update particle weights
+            return self.weight
 
         # Move particle
         # Scan Lidar
@@ -106,13 +107,21 @@ class Particle:
             return False
 
         # Calculate a weight by comparing this particles lidar data with the robot's lidar data
+        # If the robot is in a deadzone, the calculated weight is invalid.
+        # It is important that the place() function does not try to place a particle
+        # in an invalid location.
         def __setWeight(self):
-            if not self.valid_weight(): return -2
-            result = np.corrcoef(np.array(self.robot_object.samples), np.array(self.samples))
-            if result[0][1] == result[1][0]:
-                self.weight = result[0][1]
-#               px = self.Gaussian(meas[0], self.meas_noise, self.x)
-#               py = self.Gaussian(meas[1], self.meas_noise, self.y)
+            # If the robot sensor data is not valid do not change the weight
+            if self.robot_object.valid_weight():
+                result = np.corrcoef(np.array(self.robot_object.samples), np.array(self.samples))
+                if result[0][1] == result[1][0]:
+                    if result[0][1] > 0:
+                        self.weight = result[0][1]
+                    else:
+                        self.weight = 0
+                    return self.weight
+#                   px = self.Gaussian(meas[0], self.meas_noise, self.x)
+#                   py = self.Gaussian(meas[1], self.meas_noise, self.y)
 
         def __setNewHeading(self):
             max_distance = self.parms['lidarMaxDistance']
@@ -151,7 +160,7 @@ class Particle:
         # Width, Height, x, y 
         def __constrainedLocation(self, w, h, x, y):
             arena = self.parms['arena']
-            for i in range(10):
+            while(1):
                 x += int((random.random()*w) - w/2)
                 y += int((random.random()*h) - h/2)
                 x = max(0,x)

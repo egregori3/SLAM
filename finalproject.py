@@ -28,13 +28,14 @@ def Config(parameters):
     parameters['simulations']                     = 1        # Number of simulations
     parameters['displayDynamicText']              = list()
     parameters['arenaRegion']                     = 10
+    parameters['numberOfParticles']               = 0
 
     # Robot model parameters
     parameters['measurementSigmaNoise']           = 2.0      # Sigma for measurement noise
     parameters['headingSigmaNoise']               = 0.15     # Sigma for turning noise
     parameters['distanceSigmaNoise']              = 0.003    # Sigma for distance noise
     parameters['distanceDivider']                 = 10
-    parameters['lidarSamples']                    = 720
+    parameters['lidarSamples']                    = 36
     parameters['distanceIteraton']                = 30       # Move 10 pixels per iteration
     parameters['lidarMaxDistance']                = 50       # Max distance in pixels
 
@@ -50,55 +51,15 @@ def dumpConfig(parameters):
 def OutputData(parameters, index, pf):
     if parameters['plotGraphics']:
         filename = parameters['outputPath']+"/iteration" + str(index)
-        wmax = pf.maxWeight()
+        if type(pf) == alg.ParticleFilter:
+            wmax = pf.maxWeight()
+        else:
+            wmax = 1
         print("Output %s"%(filename))
         image = display.Display(parameters, pf, wmax, filename)
     if parameters['plotSamples']:
         filename = parameters['outputPath']+"/lidar" + str(index)
         parameters['dataLoggerObject'].plotSamples(pf.particles, filename)
-
-
-#==============================================================================
-#
-# Plot sample data
-#
-#==============================================================================
-def PlotParticleSamples(parms):
-    #plotSamples(self, particle_list, title)
-    pass
-
-#==============================================================================
-#
-# Particle Filter based prediction
-#
-#==============================================================================
-def ParticleFilterSimulation(parms, robot):
-    print('Particle Filter Simulation')
-    # Brute force simulation of multiple possible parameters
-    for sim in range(1,parms['simulations']+1):
-        print('Simulation #', sim)
-
-        # Instantiate particle filter with N particles and inital position
-        pf = alg.ParticleFilter(parms, robot)
-        OutputData(parms, 0, pf)
-        return
-        for i in range(1, parms['iterations']):
-            print("Iteration %d: robot(%d, %d)"%(i, int(robot.x), int(robot.y)), end=" ")
-            result = pf.update()
-            wmax = pf.maxWeight()
-            wavg = pf.avgWeight()
-            predicted_x, predicted_y = pf.avgXY()
-            distance = helpers.distance_between((predicted_x, predicted_y),(robot.x,robot.y))
-            print("wmax=%f, wavg=%f"%(wmax, wavg), end=" ")
-            print("pred(%d,%d)"%(predicted_x, predicted_y), end=" ")
-            print("dist=%d" % distance, end=" ")
-            parms['displayDynamicText'].append("wavg=%.2f" % wavg)
-            parms['displayDynamicText'].append("pred(%d,%d)" % (predicted_x, predicted_y))
-            parms['displayDynamicText'].append("dist=%d" % distance)
-            OutputData(parms, i, pf)
-            print("\n")
-            if result:
-                break
 
 #==============================================================================
 #
@@ -110,9 +71,6 @@ def PlaceRobot(parms):
     robot = model.Particle(parms=parms)
     if 'robotX' not in parms:
         robot.place({})
-        # Drive robot to valid weight
-        while(robot.valid_weight() == False):
-            robot.move()
     else:
         try:
             data = (parms['robotX'], parms['robotY'], parms['robotH'])
@@ -131,8 +89,10 @@ def PlaceRobot(parms):
 #==============================================================================
 def usage():
     print("!ERROR! Illegal parameter")
-    print("-a arenaFilename -i iterations -p numberOfParticles")
-    print("[-v verbose] [-o outputPath] [-d dataFilename] [-m plot samples] [-g output graphics]")
+    print("Required: -a arenaFilename -i iterations ")
+    print("Optional strings:  [-o outputPath] [-d dataFilename] [-m plot samples] ")
+    print("Optional ints: [-x -y -h Initial robot position] [-w Initial weight threshold] [-p numberOfParticles]")
+    print("Optional Flags: [-v verbose] [-g output graphics]")
     print("-o must be specified with -d")
     print("-o must be specified with -m")
     print("-o must be specified with -g")
@@ -142,7 +102,7 @@ def main(argv):
     parameters = dict()
     Config(parameters)
     try:
-        opts, args = getopt.getopt(argv, "vgi:o:a:d:p:m:x:y:h:")
+        opts, args = getopt.getopt(argv, "vgi:o:a:d:p:m:x:y:h:w:")
     except getopt.GetoptError:
         usage()
     for opt, arg in opts:
@@ -168,13 +128,15 @@ def main(argv):
             parameters['robotY']            = int(arg)
         elif opt in ("-h"):
             parameters['robotH']            = float(arg)
+        elif opt in ("-w"):
+            parameters['initialWeightThres']= float(arg)
+
 
     # Test command line parameters
     try:
         print("arenaFilename       = "+parameters['arenaFilename'])
         if 'outputPath' in parameters:
             print("outputPath          = "+parameters['outputPath'])
-        print("Number of particles = "+str(parameters['numberOfParticles']))
         print("iterations          = "+str(parameters['iterations']))
         if parameters['plotGraphics']: 
             print("Graphics output enabled")
@@ -200,9 +162,50 @@ def main(argv):
     if 'dataFilename' in parameters: 
         parameters['dataLoggerObject'].startDataLogger()
 
-    robot = PlaceRobot(parameters)
-    dumpConfig(parameters)
-    ParticleFilterSimulation(parameters, robot)
+    print('Particle Filter Simulation')
+    # Brute force simulation of multiple possible parameters
+    for sim in range(1,parameters['simulations']+1):
+        print('Simulation #', sim)
+
+    state = 'addRobot'
+    iteration = 0
+    while(1):
+        if state == 'addRobot':
+            print("Placing robot")
+            pf_or_robot = PlaceRobot(parameters)
+            state = 'moveRobot'
+        elif state == 'moveRobot':
+            print("Move robot")
+            if pf_or_robot.valid_weight() == False:
+                pf_or_robot.move()
+            else:
+                state = 'placeParticles'
+                robot = pf_or_robot
+        elif state == 'placeParticles':
+            print("Place particles")
+            pf_or_robot = alg.ParticleFilter(parameters, robot)
+            state = 'updateSimulation'
+        elif state == 'updateSimulation':
+            print("Iteration %d: robot(%d, %d)"%(iteration, int(robot.x), int(robot.y)), end=" ")
+            result = pf_or_robot.update()
+            wmax = pf_or_robot.maxWeight()
+            wavg = pf_or_robot.avgWeight()
+            predicted_x, predicted_y = pf_or_robot.avgXY()
+            distance = helpers.distance_between((predicted_x, predicted_y),(robot.x,robot.y))
+            print("wmax=%f, wavg=%f"%(wmax, wavg), end=" ")
+            print("pred(%d,%d)"%(predicted_x, predicted_y), end=" ")
+            print("dist=%d" % distance, end=" ")
+            parameters['displayDynamicText'].append("wavg=%.2f" % wavg)
+            parameters['displayDynamicText'].append("pred(%d,%d)" % (predicted_x, predicted_y))
+            parameters['displayDynamicText'].append("dist=%d" % distance)
+        else:
+            print("!ERROR! Illegal state")
+            break
+
+        OutputData(parameters, iteration, pf_or_robot)
+        iteration += 1
+        if iteration > parameters['iterations']:
+            break
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

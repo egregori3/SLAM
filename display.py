@@ -2,6 +2,7 @@
 
 import cv2
 import helpers
+import LidarBotModel as model
 
 #==============================================================================
 #
@@ -10,11 +11,14 @@ import helpers
 #==============================================================================
 class Display:
 
-    def __init__(self, parameters, pf, wmax, filename):
+    def __init__(self, parameters, p_or_pf, wmax, filename):
         self.parms = parameters
         self.__image = parameters['arena'].GetImage().copy()
         self.addText()
-        self.addParticles(pf, wmax)
+        if type(p_or_pf) == model.Particle:
+            self.addRobot(p_or_pf)
+        else:
+            self.addParticles(p_or_pf, wmax)
         self.addLine(parameters['robotPath'])
         self.saveImage(filename)
 
@@ -22,6 +26,9 @@ class Display:
         if len(points) > 1:
             for i in range(len(points)-1):
                 cv2.line(self.__image,(points[i][0],points[i][1]),(points[i+1][0],points[i+1][1]),(128,128,128),2)
+
+    def addRobot(self, particle):
+        cv2.circle(self.__image, (int(particle.x), int(particle.y)), 6, (255,255,0), -1)
 
     def addParticles(self, pf, wmax):
         # The robot mUST be the first particle because it needs to move first

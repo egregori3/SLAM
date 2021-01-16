@@ -1,6 +1,7 @@
 # Written by Eric GRegori
 
 import cv2
+import math
 
 #==============================================================================
 #
@@ -41,7 +42,8 @@ class Arena:
                     (  0,1  ), # 1101 - put into 4
                     (  1,1  ), # 1110 - put into 8
                     (0.5,0.5)] # 1111 - put into middle
-        self.outer_scan = [self.__boundary(0,0,parameters['lidarMaxDistance'],angle) for angle in range(2*PI, PI/16)]
+        self.outer_scan = [self.__boundary(parameters['lidarMaxDistance'],angle) \
+                for angle in range(0,360,10)]
         self.valid_regions = self.__getValidRegions()
 
     def GetImage(self): return self.__image
@@ -65,22 +67,13 @@ class Arena:
         y = 0
         valid_regions = []
         while(1):
-            code = 0
-            if not self.CheckXY(x,y): # upper left
-                code = 1
-            if not self.CheckXY(x+self.region-1,y): # upper right
-                code += 2
-            if not self.CheckXY(x,y+self.region-1): # lower left
-                code += 4
-            if not self.CheckXY(x+self.region-1,y+self.region-1): # lower right
-                code += 8
-            offset = self.cad[code]
-            if offset[0] >= 0:
-                xa = int(offset[0]*self.region)
-                ya = int(offset[1]*self.region)
-                print("@", end="")
-                cv2.circle(self.__image, (x+xa, y+ya), 1, (0,0,255), -1)
-                valid_regions.append((x+xa, y+ya))
+            if not self.CheckXY(x,y): # center is open
+                for offset in self.outer_scan:
+                    xa = min(offset[0]+x, self.width)
+                    ya = min(offset[1]+y, self.height)
+                    if self.CheckXY(xa,ya): # Scan hit wall
+                        cv2.circle(self.__image, (x, y), 1, (0,0,255), -1)
+                        valid_regions.append((x, y))
             x = int((i * self.region) % self.width)
             y = int((i * self.region) / self.width)*self.region
             i += 1
@@ -88,9 +81,9 @@ class Arena:
         print()
         return valid_regions
 
-        def __boundary(self,x,y,d,heading):
-                x += d * math.cos(heading)
-                y += d * math.sin(heading)
-                return x,y
+    def __boundary(self,d,heading):
+            x = d * math.cos(heading*(2*math.pi/360))
+            y = d * math.sin(heading*(2*math.pi/360))
+            return (int(x), int(y))
 
 
