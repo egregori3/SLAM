@@ -75,24 +75,28 @@ class Arena:
     #  (0,0)1 2(?,0)
     #  (0,?)4 8(?,?)
     def __getValidRegions(self):
-        print("Finding valid regions:", end=" ")
+        print("Finding valid regions")
         i = 0
         x = 0
         y = 0
         valid_regions = []
         while(1):
             if not self.CheckXY(x,y): # center is open
+                valid = False
                 for offset in self.outer_scan:
                     xa = min(offset[0]+x, self.width)
                     ya = min(offset[1]+y, self.height)
                     if self.CheckXY(xa,ya): # Scan hit wall
-                        cv2.circle(self.__image, (x, y), 1, (0,0,255), -1)
-                        valid_regions.append((x, y))
+                        valid = True
+                        break
+                if valid:
+                    cv2.circle(self.__image, (x, y), 1, (0,0,255), -1)
+                    valid_regions.append((x, y))
             x = int((i * self.region) % self.width)
             y = int((i * self.region) / self.width)*self.region
             i += 1
             if y >= self.height: break
-        print()
+        print("Number of valid regions: "+str(len(valid_regions)))
         return valid_regions
 
     def __boundary(self,d,heading):

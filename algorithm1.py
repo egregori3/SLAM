@@ -16,6 +16,7 @@
 
 import random
 import LidarBotModel as model
+import math
 
 #==============================================================================
 #
@@ -24,56 +25,82 @@ import LidarBotModel as model
 #==============================================================================
 class ParticleFilter:
     def __init__(self, parms, robot):
+        self.parms              = parms
         self.meas               = []
         self.particles          = []
         self.robot              = robot
-        self.numparticles       = parms['numberOfParticles']
         self.width              = parms['arenaWidth']
         self.height             = parms['arenaHeight']
         self.arena              = parms['arena']
-        self.particles.append(robot) # The robot MUST move first
+        self.numb_of_particles  = parms['numberOfParticles']
+        self.lidar_max_dist     = parms['lidarMaxDistance']
+        self.init_weight_thres  = parms['initialWeightThres']
 
+        self.particles.append(robot) # The robot MUST move first
+        self.__resetParticles()
+
+    def __resetParticles(self):
         # For each valid region calculate a weight.
         print("Scanning valid regions")
-        tester = model.Particle(parms, robot_object=robot)
-        weight_map = [tester.place({'setPosition':(position[0], position[1], 0)}) \
-            for position in self.arena.valid_regions]
-        print("Placing initial particles - weight > "+str(parms['initialWeightThres']))
-        i = 0
-        for index in range(len(weight_map)):
-            if weight_map[index] > parms['initialWeightThres']:
-                p = model.Particle(parms, myid=i, robot_object=robot)
-                position = self.arena.valid_regions[index]
-                p.place({'setPosition':(position[0], position[1], 0)}) 
+        tester = model.Particle(self.parms, robot_object=self.robot)
+        xy_list = self.__getXYByWeight(tester, self.init_weight_thres)
+        print("Placing initial particles - weight > "+str(self.init_weight_thres))
+        if self.numb_of_particles == 0:
+            print("Number of particles set by algorithm")
+            i = 0
+            for (x,y) in xy_list:
+                p = model.Particle(self.parms, myid=i, robot_object=self.robot)
+                i += 1
+                self.__placePosition(p,x,y)
                 self.particles.append(p)
                 print("*", end="", flush=True)
-                i += 1
         print()
-        print("Placed %d particles"%i)
+        print("Placed %d particles"%len(self.particles))
 
-    def __placeByRegion(self, particle, x, y, thres):
-        cmd = {'constrainedRandom':(x,y,50,50)}
-        particle.place(cmd)
-        if particle.weight > thres:
-            return True
-        return False
+    def __placePosition(self,p,x,y):
+        weight = p.place({'setPosition':(x,y,0)})
+        return weight
 
-    def __placeByWeight(self, particle, thres):
-        particle.place({})  # Place randomly
-        weight = particle.weight
-        if weight > thres:
-            return True
-        return False
+    # Returns list (x,y) tuples based on weight
+    def __getXYByWeight(self, particle, threshold):
+        return [(particle.x,particle.y) \
+            for position in self.arena.valid_regions \
+                if self.__placePosition(particle, position[0], position[1]) > threshold]
 
-    def __placeNextTo(self, keep_particle, relocate_particle):
-        x=keep_particle.x
-        y=keep_particle.y
-        w=keep_particle.weight
-        # x,y is the location of the keep particle
-        # Place the dump particle in a random location around the keep particle
-        data = (x, y, 50, 50)
-        relocate_particle.place({'constrainedRandom':data})
-        return x,y,w
+    # Computes distance between point1 and point2. Points are (x, y) pairs.
+    def __DistanceBetween(self, point1, point2):
+        (x1, y1) = point1
+        (x2, y2) = point2
+        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+    # Place the relocate particle in a random location around the keep particle
+    # within distance.
+    def __placeNextTo(self, keep_particle, relocate_particle, check_map, dist):
+        # Place the relocate particle within distance from x,y
+        # Width, Height, x, y 
+        dist = int(dist)
+        for x in range(dist):
+            for y in range(dist):
+                if self.arena.CheckXY(x,y):
+                    check_map[y][x] = True
+
+        for tries in range(dist*dist):
+            x = keep_particle.x + int((random.random()*dist) - dist/2)
+            y = keep_particle.y + int((random.random()*dist) - dist/2)
+            x = max(0,x)
+            y = max(0,y)
+            x = min(x,self.arena.width-1)
+            y = min(y,self.arena.height-1)
+            if check_map[y][x] == False:
+                if self.__placePosition(relocate_particle,x,y) >= 0.5:
+                    check_map[y][x] = True
+                    return True
+        return False # We could not place the particle
+
+    def pfData(self, keep=0, done=False):
+        nump = len(self.particles)
+        avgw = self.__avgWeight()
+        return (done, nump, avgw, keep)
 
     # move particles
     # return True to end simulation
@@ -84,7 +111,7 @@ class ParticleFilter:
 
         # If the robot is in a deadzone, we do not have enough data to 
         # make a decision on how to place particles
-        if not self.robot.valid_weight(): return False
+        if not self.robot.valid_weight(): return self.pfData()
 
         # Create list of all particles (not the robot)
         particles = [p for p in self.particles if not p.this_is_a_robot()]
@@ -101,25 +128,31 @@ class ParticleFilter:
         print("dump=%d"%(numdump), end=" ")
         if numkeep == 0:
             # if we do not have any good hypothesus (particles) we need to guess
-            for d in dump_particles:
-                i = int(random.random() * (len(self.arena.valid_regions)-1))
-                p = self.arena.valid_regions[i]
-                self.__placeByRegion(d, p[0], p[1], 75)
+            self.__resetParticles()
         else:
             # Place low weight particles next to high weight particles
             keep = 0
             dump = 0
             r = 0
+            check_map = [[False for c in range(self.width)] for r in range(self.height)]
+            for p in keep_particles:
+                check_map[p.y][p.x] = True
             # Redistribute particles with weights below keepThreshold
             # next to particles with weights above keepThreshold
             for relocate_particle in dump_particles:
                 if keep < numkeep:
                     # for each keep particle assign X dump particles
-                    x,y,w = self.__placeNextTo(keep_particles[keep], relocate_particle)
-                    if dump == 0: print("(%d,%d,%3f)"%(x,y,w), end="")
+                    if self.__placeNextTo(keep_particles[keep], relocate_particle, check_map, \
+                            self.lidar_max_dist/2) == False:
+                        self.particles.remove(relocate_particle)
+                    if dump == 0:
+                        x = keep_particles[keep].x
+                        y = keep_particles[keep].y
+                        w = keep_particles[keep].weight
+                        print("(%d,%d,%3f)"%(x,y,w), end="")
                     dump += 1
                     # We assigne 10% of the dump particles to each keep particle
-                    if dump >= int((numdump+numkeep)*0.1):
+                    if dump >= int(numdump/numkeep):
                         keep += 1
                         print("=%d"%(dump), end=" ")
                         dump = 0
@@ -127,17 +160,9 @@ class ParticleFilter:
                     # We have assigne 10 dump particles to each keep particle but we have
                     # extra dump particles
                     k = 0
-        return False
+        return self.pfData(keep=len(keep_particles))
 
-    def maxWeight(self):
-        wmax = 0.0
-        for p in self.particles:
-            if not p.this_is_a_robot():
-                if p.weight > wmax:
-                    wmax = p.weight
-        return wmax
-
-    def avgWeight(self):
+    def __avgWeight(self):
         avg = 0.0
         n  = 0
         for p in self.particles:
@@ -146,7 +171,7 @@ class ParticleFilter:
                 n += 1
         return avg / n
 
-    def avgXY(self):
+    def __avgXY(self):
         x = 0.0
         y = 0.0
         n = 0
@@ -156,4 +181,35 @@ class ParticleFilter:
                 y += (p.weight * p.y)
                 n += 1
         return int(x/n), int(y/n)
+
+#
+# These functions do not use valid regions and are deprecated
+#
+    # deprecated
+    def __DEPRECATED_placeByRegion(self, particle, x, y, thres):
+        cmd = {'constrainedRandom':(x,y,50,50)}
+        particle.place(cmd)
+        if particle.weight > thres:
+            return True
+        return False
+
+    # deprecated
+    def __DEPRECATED_placeByWeight(self, particle, thres):
+        particle.place({})  # Place randomly
+        weight = particle.weight
+        if weight > thres:
+            return True
+        return False
+
+    # deprecated
+    def __DEPRECATED_placeNextTo(self, keep_particle, relocate_particle):
+        x=keep_particle.x
+        y=keep_particle.y
+        w=keep_particle.weight
+        # x,y is the location of the keep particle
+        # Place the dump particle in a random location around the keep particle
+        data = (x, y, 50, 50)
+        relocate_particle.place({'constrainedRandom':data})
+        return x,y,w
+
 

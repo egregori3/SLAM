@@ -19,7 +19,6 @@ import sys
 import os
 import math
 import random
-import helpers
 import LidarBotModel as model
 import algorithm1 as alg
 import arena
@@ -36,21 +35,26 @@ from ast import literal_eval
 #
 #==============================================================================
 def Config(parameters):
-    parameters['plotGraphics']                    = False
-    parameters['plotSamples']                     = False
+
+    # Simulation parameters
     parameters['verbose']                         = False
-    parameters['simulations']                     = 1        # Number of simulations
-    parameters['displayDynamicText']              = list()
     parameters['arenaRegion']                     = 10
     parameters['numberOfParticles']               = 0
+    parameters['distanceDivider']                 = 10
+    parameters['distanceIteraton']                = 30       # Move 10 pixels per iteration
+
+    # Display parameters
+    parameters['plotGraphics']                    = False
+    parameters['plotSamples']                     = False
+    parameters['simulations']                     = 1        # Number of simulations
+    parameters['displayTextX']                    = 50
+    parameters['displayTextY']                    = 50
 
     # Robot model parameters
     parameters['measurementSigmaNoise']           = 2.0      # Sigma for measurement noise
     parameters['headingSigmaNoise']               = 0.15     # Sigma for turning noise
     parameters['distanceSigmaNoise']              = 0.003    # Sigma for distance noise
-    parameters['distanceDivider']                 = 10
     parameters['lidarSamples']                    = 36
-    parameters['distanceIteraton']                = 30       # Move 10 pixels per iteration
     parameters['lidarMaxDistance']                = 50       # Max distance in pixels
 
 def dumpConfig(parameters):
@@ -62,15 +66,11 @@ def dumpConfig(parameters):
 # OutputData
 #
 #==============================================================================
-def OutputData(parameters, index, pf):
+def OutputData(parameters, index, pf, text):
     if parameters['plotGraphics']:
         filename = parameters['outputPath']+"/iteration" + str(index)
-        if type(pf) == alg.ParticleFilter:
-            wmax = pf.maxWeight()
-        else:
-            wmax = 1
         print("Output %s"%(filename))
-        image = display.Display(parameters, pf, wmax, filename)
+        image = display.Display(parameters, pf, filename, text)
     if parameters['plotSamples']:
         filename = parameters['outputPath']+"/lidar" + str(index)
         parameters['dataLoggerObject'].plotSamples(pf.particles, filename)
@@ -93,7 +93,7 @@ def PlaceRobot(parms):
             usage()
         p = {'setPosition':data}
         robot.place(p)
-    print("Robot initial state (x = %d, y = %d, h = %f"%(robot.x, robot.y, robot.heading))
+    print("Robot initial state (x = %d, y = %d, h = %f)"%(robot.x, robot.y, robot.heading))
     return robot
 
 #==============================================================================
@@ -170,7 +170,6 @@ def main(argv):
         print("!ERROR! -o must be specified with -g")
         usage()
 
-    parameters['displayStaticText'] = ["p="+str(parameters['numberOfParticles'])]
     parameters['arena'] = arena.Arena(parameters)
     parameters['dataLoggerObject'] = DataLogger.DataLogger(parameters)
     if 'dataFilename' in parameters: 
@@ -184,39 +183,43 @@ def main(argv):
     state = 'addRobot'
     iteration = 0
     while(1):
+        dtext = list()
         if state == 'addRobot':
             print("Placing robot")
             pf_or_robot = PlaceRobot(parameters)
+            dtext.append("Placing robot")
+            robot = pf_or_robot
             state = 'moveRobot'
         elif state == 'moveRobot':
             print("Move robot")
             if pf_or_robot.valid_weight() == False:
                 pf_or_robot.move()
+                dtext.append("Move robot to valid weight region")
             else:
                 state = 'placeParticles'
-                robot = pf_or_robot
+            robot = pf_or_robot
         elif state == 'placeParticles':
             print("Place particles")
             pf_or_robot = alg.ParticleFilter(parameters, robot)
+            dtext.append("Place particles")
             state = 'updateSimulation'
+            (done, nump, avgw, keep) = pf_or_robot.pfData()
         elif state == 'updateSimulation':
             print("Iteration %d: robot(%d, %d)"%(iteration, int(robot.x), int(robot.y)), end=" ")
-            result = pf_or_robot.update()
-            wmax = pf_or_robot.maxWeight()
-            wavg = pf_or_robot.avgWeight()
-            predicted_x, predicted_y = pf_or_robot.avgXY()
-            distance = helpers.distance_between((predicted_x, predicted_y),(robot.x,robot.y))
-            print("wmax=%f, wavg=%f"%(wmax, wavg), end=" ")
-            print("pred(%d,%d)"%(predicted_x, predicted_y), end=" ")
-            print("dist=%d" % distance, end=" ")
-            parameters['displayDynamicText'].append("wavg=%.2f" % wavg)
-            parameters['displayDynamicText'].append("pred(%d,%d)" % (predicted_x, predicted_y))
-            parameters['displayDynamicText'].append("dist=%d" % distance)
+            (done, nump, avgw, keep) = pf_or_robot.update()
         else:
             print("!ERROR! Illegal state")
             break
 
-        OutputData(parameters, iteration, pf_or_robot)
+        dtext.append("r=%d,%d" % (robot.x, robot.y))
+        if type(pf_or_robot) == alg.ParticleFilter:
+            print("np=%d"%nump, end=" ")
+            dtext.append("np=%d" % nump)
+            print("wavg=%f"%avgw, end=" ")
+            dtext.append("wavg=%.2f" % avgw)
+            dtext.append("k=%d" % keep)
+
+        OutputData(parameters, iteration, pf_or_robot, dtext)
         iteration += 1
         if iteration > parameters['iterations']:
             break

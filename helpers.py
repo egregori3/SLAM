@@ -21,11 +21,6 @@ from math import *
 # Helper Functions
 #
 #==============================================================================
-def distance_between(point1, point2):
-    """Computes distance between point1 and point2. Points are (x, y) pairs."""
-    x1, y1 = point1
-    x2, y2 = point2
-    return sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 #def angle_trunc(a):
 #        while a < 0.0:
@@ -48,13 +43,6 @@ def lowPassFilter(measurements):
                 y = measurements[i-3][1]+measurements[i-2][1]+measurements[i-1][1]+measurements[i][1]
                 output.append([x/4.0,y/4.0])       
         return(output)        
-
-def colorBetween(startColor, endColor, percentage):
-    percentage = min(1., max(0., percentage)) # limit percentage to 0-1 
-    ib = int(endColor[0] * percentage + startColor[0] * (1 - percentage))
-    ig = int(endColor[1] * percentage + startColor[1] * (1 - percentage))
-    ir = int(endColor[2] * percentage + startColor[2] * (1 - percentage))
-    return (ib,ig,ir)
 
 #def error(l1, l2):
 #    return sum((c - a)**2 + (d - b)**2 for ((a, b), (c, d)) in zip(l1, l2))**0.5
