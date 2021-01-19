@@ -25,48 +25,48 @@ import algorithm1 as alg
 #==============================================================================
 class Display:
 
-    def __init__(self, parms, p_or_pf, filename, text_list):
-        self.text_list = text_list
-        self.textx = parms['displayTextX']
-        self.texty = parms['displayTextY']
-        self.__image = parms['arena'].GetImage().copy()
-        self.addText()
+    def __init__(self, parms, p_or_pf, filename, text_list, point):
+        self.text_list      = text_list
+        self.robot_color    = (255,255,0)
+        self.textx          = parms['displayTextX']
+        self.texty          = parms['displayTextY']
+        self.__image        = parms['arena'].GetImage().copy()
+        self.__addText()
         if type(p_or_pf) == alg.ParticleFilter:
             # We were passed a particle filter object
-            self.addParticles(p_or_pf)
+            self.__addParticles(p_or_pf, point)
         else:
             # We were passed a robot object
-            self.addRobot(p_or_pf)
+            self.__addRobot(p_or_pf)
 
-        self.addLine(parms['robotPath'])
-        self.saveImage(filename)
+        self.__addLine(parms['robotPath'])
+        self.__saveImage(filename)
 
     def __colorMap(self, weight):
         if weight >= 0.9: return (0,255,0) # Green
         if weight < 0.5: return (0,0,255)  # Red
         return (0,255,255) # Yellow
 
-    def addLine(self, points):
+    def __addLine(self, points):
         if len(points) > 1:
             for i in range(len(points)-1):
                 cv2.line(self.__image,(points[i][0],points[i][1]),(points[i+1][0],points[i+1][1]),(128,128,128),2)
 
-    def addRobot(self, particle):
-        cv2.circle(self.__image, (particle.x, particle.y), 6, (255,255,0), -1)
+    def __addRobot(self, particle):
+        cv2.circle(self.__image, (particle.x, particle.y), 6, self.robot_color, -1)
 
-    def addParticles(self, pf):
+    def __addParticles(self, pf, point):
         # The robot mUST be the first particle because it needs to move first
-        robot_color = (255,255,0)
-        default_particle_color = (0,0,255)
         for p in pf.particles:
-            if p.this_is_a_robot():
-                color = robot_color
-            else:
+            if not p.this_is_a_robot():
                 color = self.__colorMap(p.weight)
-            cv2.circle(self.__image, (p.x, p.y), 4, color, -1)
-        cv2.circle(self.__image, (pf.particles[0].x, pf.particles[0].y), 6, robot_color, -1)
+                cv2.circle(self.__image, (p.x, p.y), 4, color, -1)
+        # Plot robot last so that it is on top of the particles
+        self.__addRobot(pf.particles[0])
+        if point[2] > 0:
+            cv2.circle(self.__image, (point[0], point[1]), point[2], (255,0,255), 1)
 
-    def addText(self,):
+    def __addText(self,):
         text = ""
         for field in self.text_list:
             text += (field+" ")
@@ -78,5 +78,5 @@ class Display:
         image = cv2.putText(self.__image, text, org, font,
                    fontScale, color, thickness, cv2.LINE_AA) 
 
-    def saveImage(self,filename):
+    def __saveImage(self,filename):
         cv2.imwrite(filename+".jpg", self.__image)

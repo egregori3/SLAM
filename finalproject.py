@@ -66,11 +66,11 @@ def dumpConfig(parameters):
 # OutputData
 #
 #==============================================================================
-def OutputData(parameters, index, pf, text):
+def OutputData(parameters, index, pf, text, prediction):
     if parameters['plotGraphics']:
         filename = parameters['outputPath']+"/iteration" + str(index)
         print("Output %s"%(filename))
-        image = display.Display(parameters, pf, filename, text)
+        image = display.Display(parameters, pf, filename, text, prediction)
     if parameters['plotSamples']:
         filename = parameters['outputPath']+"/lidar" + str(index)
         parameters['dataLoggerObject'].plotSamples(pf.particles, filename)
@@ -183,6 +183,7 @@ def main(argv):
     state = 'addRobot'
     iteration = 0
     while(1):
+        prediction = (0,0,0)
         dtext = list()
         if state == 'addRobot':
             print("Placing robot")
@@ -203,23 +204,24 @@ def main(argv):
             pf_or_robot = alg.ParticleFilter(parameters, robot)
             dtext.append("Place particles")
             state = 'updateSimulation'
-            (done, nump, avgw, keep) = pf_or_robot.pfData()
+            (done, nump, avgw, keep, prediction) = pf_or_robot.pfData()
         elif state == 'updateSimulation':
-            print("Iteration %d: robot(%d, %d)"%(iteration, int(robot.x), int(robot.y)), end=" ")
-            (done, nump, avgw, keep) = pf_or_robot.update()
+            print("Iteration %d: robot(%d, %d)"%(iteration,robot.x,robot.y), end=" ")
+            (done, nump, avgw, keep, prediction) = pf_or_robot.update()
         else:
             print("!ERROR! Illegal state")
             break
 
         dtext.append("r=%d,%d" % (robot.x, robot.y))
         if type(pf_or_robot) == alg.ParticleFilter:
-            print("np=%d"%nump, end=" ")
-            dtext.append("np=%d" % nump)
-            print("wavg=%f"%avgw, end=" ")
-            dtext.append("wavg=%.2f" % avgw)
-            dtext.append("k=%d" % keep)
+            fields = ["p=%d,%d"%(nump,keep), "wavg=%f"%avgw]
+            if prediction[2] > 0:
+                fields.append("L=%d,%d"%(prediction[0],prediction[1]))
+            for field in fields:
+                print(field, end=" ")
+                dtext.append(field)
 
-        OutputData(parameters, iteration, pf_or_robot, dtext)
+        OutputData(parameters, iteration, pf_or_robot, dtext, prediction)
         iteration += 1
         if iteration > parameters['iterations']:
             break

@@ -97,10 +97,24 @@ class ParticleFilter:
                     return True
         return False # We could not place the particle
 
-    def pfData(self, keep=0, done=False):
+    def __predict(self,kp):
+        pc = len(kp)
+        if pc == 0: return (0,0,0)
+        if pc == 1: return (kp[0].x, kp[0].y, 3)
+        distance = 0
+        for i in range(pc-1):
+            distance += self.__DistanceBetween((kp[i].x,kp[i].y),(kp[i+1].x,kp[i+1].y))
+        xa = 0
+        ya = 0
+        for p in kp:
+            xa += p.x
+            ya += p.y
+        return (int(xa/pc),int(ya/pc),int(distance/pc))
+
+    def pfData(self, keep=0, done=False, prediction=(0,0,0)):
         nump = len(self.particles)
         avgw = self.__avgWeight()
-        return (done, nump, avgw, keep)
+        return (done, nump, avgw, keep, prediction)
 
     # move particles
     # return True to end simulation
@@ -160,7 +174,7 @@ class ParticleFilter:
                     # We have assigne 10 dump particles to each keep particle but we have
                     # extra dump particles
                     k = 0
-        return self.pfData(keep=len(keep_particles))
+        return self.pfData(keep=len(keep_particles), prediction=self.__predict(keep_particles))
 
     def __avgWeight(self):
         avg = 0.0

@@ -36,13 +36,13 @@ from math import *
 #    heading = angle_trunc(heading)
 #    return heading
 
-def lowPassFilter(measurements):
-        output = []
-        for i in range(4,len(measurements)):
-                x = measurements[i-3][0]+measurements[i-2][0]+measurements[i-1][0]+measurements[i][0]
-                y = measurements[i-3][1]+measurements[i-2][1]+measurements[i-1][1]+measurements[i][1]
-                output.append([x/4.0,y/4.0])       
-        return(output)        
+#def lowPassFilter(measurements):
+#        output = []
+#        for i in range(4,len(measurements)):
+#                x = measurements[i-3][0]+measurements[i-2][0]+measurements[i-1][0]+measurements[i][0]
+#                y = measurements[i-3][1]+measurements[i-2][1]+measurements[i-1][1]+measurements[i][1]
+#                output.append([x/4.0,y/4.0])       
+#        return(output)        
 
 #def error(l1, l2):
 #    return sum((c - a)**2 + (d - b)**2 for ((a, b), (c, d)) in zip(l1, l2))**0.5
