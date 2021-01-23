@@ -15,6 +15,7 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import matplotlib.pyplot as plt
+import algorithm1 as alg
 
 class DataLogger:
 
@@ -25,15 +26,16 @@ class DataLogger:
         self.fp = open(self.parms[dataFilename], "w")
         fp.write("rx, ry, ")
 
-    def plotSamples(self, particle_list, filename):
+    def plotSamples(self, filename):
+        pf = parms['pfObject']
         filename = filename+".jpg"
         fig, ax = plt.subplots(facecolor=(.18, .31, .31))
         ax.set_facecolor('#eafff5')
         ax.set_xlabel('Sample', color='c')
         ax.set_ylabel('Distance', color='peachpuff')
-        t = range(len(particle_list[0].samples))
+        t = range(len(pf.particles[0].samples))
         ax.set_title("LIDAR Samples", color='0.7')
-        for s in particle_list:
+        for s in pf.particles:
             ax.plot(t, s.samples, label=s.text)
         ax.tick_params(labelcolor='tab:orange')
         plt.legend()

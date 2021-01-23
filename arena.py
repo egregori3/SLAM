@@ -26,7 +26,9 @@ class Arena:
 
     def __init__(self, parameters):
         print("Loading arena: ", parameters['arenaFilename'])
-        self.__image = cv2.imread(parameters['arenaFilename'])
+        self.__image            = cv2.imread(parameters['arenaFilename'])
+        self.lidar_max_distance = parameters['lidarMaxDistance']
+        self.lidar_samples      = parameters['lidarSamples']
         try:
             height, width, channels = self.__image.shape
             self.width = width
@@ -37,6 +39,38 @@ class Arena:
             print("height = %d, width = %d, channels = %d" % (height, width, channels))
         except Exception as e:
             print("Failure loading arena: "+e)
+        self.__createValidRegions(parameters)
+        self.__createLidarScan(parameters)
+
+    def GetImage(self): return self.__image
+
+    # If True than collision
+    def CheckXY(self, x, y):
+        if x >= self.width: return  True
+        if y >= self.height: return True
+        pos = self.__image[int(y),int(x)]
+        if pos[0] == 255 and pos[1] == 255 and pos[2] == 255:
+            return True
+        return False
+
+    def readLidar(self, x, y, heading, samples, front_only=False):
+            # Measure distance while incrementing heading.
+            # Start scan at robot heading.
+            if front_only:
+                sample_count = 1
+            else:
+                sample_count = self.lidar_samples
+            s = int(heading/((2 * math.pi)/self.lidar_samples))
+            for r in range(sample_count):
+                i = (r+s) % self.lidar_samples
+                for d in range(self.lidar_max_distance):
+                    (xa,ya) = self.scan_points[i][d]
+                    if self.CheckXY(x+xa,y+ya):
+                        break
+                samples[r] = d
+            return samples
+
+    def __createValidRegions(self, parameters):
         #  (0,0)1 2(?,0)
         #  (0,?)4 8(?,?)
                                # 1 = open, 0 = collision
@@ -56,20 +90,21 @@ class Arena:
                     (  0,1  ), # 1101 - put into 4
                     (  1,1  ), # 1110 - put into 8
                     (0.5,0.5)] # 1111 - put into middle
-        self.outer_scan = [self.__boundary(parameters['lidarMaxDistance'],angle) \
+        self.outer_scan = [self.__boundary(self.lidar_max_distance,angle) \
                 for angle in range(0,360,10)]
         self.valid_regions = self.__getValidRegions()
 
-    def GetImage(self): return self.__image
-
-    # If True than collision
-    def CheckXY(self, x, y):
-        if x >= self.width: return  True
-        if y >= self.height: return True
-        pos = self.__image[int(y),int(x)]
-        if pos[0] == 255 and pos[1] == 255 and pos[2] == 255:
-            return True
-        return False
+    def __createLidarScan(self, parms):
+        self.scan_points =  [ ([0] * self.lidar_max_distance) \
+                for row in range(self.lidar_samples) ]
+        scan_angle  = 0
+        angle_adder = (2 * math.pi)/self.lidar_samples
+        for s in range(self.lidar_samples):
+            for d in range(self.lidar_max_distance):
+                x = d * math.cos(scan_angle)
+                y = d * math.sin(scan_angle)
+                self.scan_points[s][d] = (int(x),int(y))
+            scan_angle = scan_angle + angle_adder
 
     # If any portion of the region is valid, add it to self.valid_regions
     #  (0,0)1 2(?,0)
