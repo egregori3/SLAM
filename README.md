@@ -1,3 +1,7 @@
+Since I am the only one working on this project, I am not using Gitflow. 
+I am using master as development branch and simply tagging releases.
+
+
 pip install opencv-python
 pip install matplotlib
 
