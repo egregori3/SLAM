@@ -16,7 +16,7 @@
 
 import math
 # import random
-# import numpy as np
+import numpy as np
 
 #==============================================================================
 #
@@ -34,11 +34,11 @@ import math
 #
 #==============================================================================
 class Particle:
-        def __init__(self, parms, myid = 0, text):
+        def __init__(self, parms, myid = 0):
             # Init static aspects of the particle
+            self.parms              = parms
             self.id                 = myid                           # Particle ID for debugging
             self.lidar_max_dist     = parms['lidarMaxDistance']
-            self.robot_path         = parms['robotPath']
             self.lidar_samples      = parms['lidarSamples']
             self.arena              = parms['arena']
 
@@ -49,58 +49,47 @@ class Particle:
             self.text               = "P"+str(myid)
 
         # After placement, the weight is valid
-        def place(self, x, y, robot_heading):
+        def place(self, x, y):
             self.x                  = int(x)                         # Initial position
             self.y                  = int(y)
             self.weight             = 0.0                            # Initial weight
             self.samples            = [0] * self.lidar_samples       # List of samples representing distances
-            self.samples = self.arena.readLidar(self.x, self.y, 
-                                        robot_heading, self.samples) # Update Lidar after placement
-            if self.robot_object != None:
-                self.__setWeight()                                   # Update particle weights
+            self.robot_samples      = self.parms['robotLidarData'] 
+            self.robot_valid_lidar  = self.parms['robotValidLidar']
+            self.__setWeight()                                       # Update particle weights
             return self.weight
 
         # Move particle
         # Scan Lidar
         # For particles, update weights
         # After moving, the weight is valid
-        def move(self, robot_distance_in_pixels, robot_heading):
+        def move(self):
             collision = False
-            for i in range(robot_distance_in_pixels):
-                self.__readLidar(front_only=True)
+            for i in range(self.parms['robotDistance']):
+                self.valid_lidar = self.arena.readLidar(self.x, self.y, self.samples) # Update Lidar after placement
                 if self.samples[0] <= 1:
                     collision = True
                     break
                 # no collision
-                self.x += math.cos(robot_heading)
-                self.y += math.sin(robot_heading)
+                self.x += math.cos(self.parms['robotHeading'])
+                self.y += math.sin(self.parms['robotHeading'])
             self.x = int(self.x)
             self.y = int(self.y)
-            self.__readLidar(robot_heading)
             self.__setWeight()
             return collision
-
-        def isThisARobot(self):
-            return (self.robot_object == None)
-
-        # if the lidar data is all max, the weight is not valid
-        def validWeight(self):
-            for sample in self.samples:
-                if sample < self.lidar_max_dist-2:
-                    return True
-            return False
 
         # Calculate a weight by comparing this particles lidar data with the robot's lidar data
         # If the robot is in a deadzone, the calculated weight is invalid.
         # It is important that the place() function does not try to place a particle
         # in an invalid location.
         def __setWeight(self):
+            self.valid_lidar = self.arena.readLidar(self.x, self.y, self.samples) # Update Lidar after placement
             # If the robot sensor data is not valid do not change the weight
-            if self.robot_object.valid_weight():
-                if self.valid_weight() == False:
+            if self.parms['robotValidLidar']:
+                if self.valid_lidar == False:
                     self.weight = 0.0
                     return 0.0
-                result = np.corrcoef(np.array(self.robot_object.samples), np.array(self.samples))
+                result = np.corrcoef(np.array(self.robot_samples), np.array(self.samples))
                 if result[0][1] == result[1][0]:
                     if result[0][1] > 0:
                         self.weight = result[0][1]

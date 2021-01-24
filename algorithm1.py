@@ -24,11 +24,10 @@ import math
 #
 #==============================================================================
 class ParticleFilter:
-    def __init__(self, parms, robot):
+    def __init__(self, parms):
         self.parms              = parms
         self.meas               = []
         self.particles          = []
-        self.robot              = robot
         self.verbose            = parms['verbose']
         self.width              = parms['arenaWidth']
         self.height             = parms['arenaHeight']
@@ -37,9 +36,10 @@ class ParticleFilter:
         self.lidar_max_dist     = parms['lidarMaxDistance']
         self.init_weight_thres  = parms['initialWeightThres']
 
-        if 1:
-            p = model.Particle(self.parms, myid=1, robot_object=self.robot)
-            self.__placePosition(p,robot.x,robot.y)
+        if 0:
+            p = model.Particle(self.parms, myid=1)
+            x,y = parms['simulatedRobotPath'][-1]
+            p.place(x, y)
             self.particles.append(p)
         else:
             self.__resetParticles()
@@ -54,23 +54,19 @@ class ParticleFilter:
             print("Number of particles set by algorithm")
             i = 0
             for (x,y) in xy_list:
-                p = model.Particle(self.parms, myid=i, "P"+str(myid))
+                p = model.Particle(self.parms, myid=i)
                 i += 1
-                self.__placePosition(p,x,y)
+                p.place(x,y)
                 self.particles.append(p)
                 print("*", end="", flush=True)
         print()
         print("Placed %d particles"%len(self.particles))
 
-    def __placePosition(self,p,x,y):
-        weight = p.place({'setPosition':(x,y,0)})
-        return weight
-
     # Returns list (x,y) tuples based on weight
     def __getXYByWeight(self, particle, threshold):
         return [(particle.x,particle.y) \
             for position in self.arena.valid_regions \
-                if self.__placePosition(particle, position[0], position[1]) > threshold]
+                if particle.place(position[0], position[1]) > threshold]
 
     # Computes distance between point1 and point2. Points are (x, y) pairs.
     def __DistanceBetween(self, point1, point2):
@@ -97,7 +93,7 @@ class ParticleFilter:
             x = min(x,self.arena.width-1)
             y = min(y,self.arena.height-1)
             if check_map[y][x] == False:
-                if self.__placePosition(relocate_particle,x,y) >= 0.5:
+                if relocate_particle.place(x,y) >= 0.5:
                     check_map[y][x] = True
                     return True
         return False # We could not place the particle
@@ -127,6 +123,7 @@ class ParticleFilter:
         # move particles
         for p in self.particles:
             p.move()
+        return self.pfData()
 
         # If the robot is in a deadzone, we do not have enough data to 
         # make a decision on how to place particles
@@ -180,22 +177,17 @@ class ParticleFilter:
 
     def __avgWeight(self):
         avg = 0.0
-        n  = 0
         for p in self.particles:
-            if not p.this_is_a_robot():
-                avg += p.weight
-                n += 1
-        return avg / n
+            avg += p.weight
+        return avg / len(self.particles)
 
     def __avgXY(self):
         x = 0.0
         y = 0.0
-        n = 0
+        n = len(self.particles)
         for p in self.particles:
-            if not p.this_is_a_robot():
-                x += (p.weight * p.x)
-                y += (p.weight * p.y)
-                n += 1
+            x += (p.weight * p.x)
+            y += (p.weight * p.y)
         return int(x/n), int(y/n)
 
 

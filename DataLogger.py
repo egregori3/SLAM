@@ -15,18 +15,14 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import matplotlib.pyplot as plt
-import algorithm1 as alg
 
 class DataLogger:
 
-    def __init__(self, parameters):
-        self.parms = parameters
-
-    def startDataLogger(self):
+    def startDataLogger(self, parms):
         self.fp = open(self.parms[dataFilename], "w")
         fp.write("rx, ry, ")
 
-    def plotSamples(self, filename):
+    def plotSamples(self, parms, filename):
         pf = parms['pfObject']
         filename = filename+".jpg"
         fig, ax = plt.subplots(facecolor=(.18, .31, .31))
@@ -37,6 +33,7 @@ class DataLogger:
         ax.set_title("LIDAR Samples", color='0.7')
         for s in pf.particles:
             ax.plot(t, s.samples, label=s.text)
+        ax.plot(t, parms['robotLidarData'], label="Robot")
         ax.tick_params(labelcolor='tab:orange')
         plt.legend()
         plt.savefig(filename)

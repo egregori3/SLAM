@@ -29,6 +29,7 @@ class Arena:
         self.__image            = cv2.imread(parameters['arenaFilename'])
         self.lidar_max_distance = parameters['lidarMaxDistance']
         self.lidar_samples      = parameters['lidarSamples']
+        self.parms              = parameters
         try:
             height, width, channels = self.__image.shape
             self.width = width
@@ -53,22 +54,33 @@ class Arena:
             return True
         return False
 
-    def readLidar(self, x, y, heading, samples, front_only=False):
+    def readLidar(self, x, y, samples):
             # Measure distance while incrementing heading.
             # Start scan at robot heading.
-            if front_only:
-                sample_count = 1
-            else:
-                sample_count = self.lidar_samples
-            s = int(heading/((2 * math.pi)/self.lidar_samples))
+            sample_count = self.lidar_samples
+            s = int(self.parms['robotHeading']/((2 * math.pi)/self.lidar_samples))
+            valid = False
+            zcount = 0
             for r in range(sample_count):
                 i = (r+s) % self.lidar_samples
                 for d in range(self.lidar_max_distance):
                     (xa,ya) = self.scan_points[i][d]
                     if self.CheckXY(x+xa,y+ya):
+                        valid = True
                         break
                 samples[r] = d
-            return samples
+                if d == 0: zcount += 1
+            if zcount == sample_count:
+                for r in range(sample_count):
+                    i = (r+s) % self.lidar_samples
+                    d = self.lidar_max_distance-1
+                    (xa,ya) = self.scan_points[i][d]
+                    if not self.CheckXY(x+xa,y+ya):
+                        samples[r] = d
+                        valid = True
+                    else:
+                        samples[r] = 0
+            return valid
 
     def __createValidRegions(self, parameters):
         #  (0,0)1 2(?,0)

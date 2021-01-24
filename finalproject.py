@@ -20,7 +20,7 @@ import os
 import arena
 import display
 import DataLogger
-# import TrackingFilter
+import TrackingFilter
 import Configuration as Config
 import RobotServer as rs
 
@@ -86,27 +86,28 @@ def main(argv):
     print("Initializing arena")
     parameters['arena'] = arena.Arena(parameters)
 
-    datalogger_object = DataLogger.DataLogger(parameters)
+    datalogger_object = DataLogger.DataLogger()
     if 'dataFilename' in parameters:
         print("Initializing datalogger")
-        datalogger_object.startDataLogger()
+        datalogger_object.startDataLogger(parameters)
 
+    prediction = (0,0,0)
     robot_server = rs.RobotServer(parameters)
     if robot_server.start(parameters) < 0:
         print("Failure starting the server")
         sys.exit(-2)
     for iteration in range(parameters['iterations']):
-        dtext = list()
+        dtext = [("Iteration %d"%iteration,False)] # Only output to console
         state = robot_server.getDataFromRobot(parameters, dtext)
-        if state < 0: break
-#       prediction = TrackingFilter.particleFilter(state, heading, lidar_data, dtext)
+        prediction = TrackingFilter.particleFilter(parameters, state, dtext)
         for field in dtext:
-            print(field)
+            print(field[0], end=" ")
+        print()
         if parameters['plotGraphics']:
             filename = parameters['outputPath']+"/iteration" + str(iteration)
             display.Display(parameters, filename, dtext, prediction)
         if parameters['plotSamples']:
-            self.datalogger_object.plotSamples(parameters['outputPath']+"/lidar" + str(iteration))
+            self.datalogger_object.plotSamples(parameters, parameters['outputPath']+"/lidar" + str(iteration))
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

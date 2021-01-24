@@ -6,53 +6,17 @@ import algorithm1 as alg
 #==============================================================================
 # Tracking Filter
 #==============================================================================
-def particleFilter(state, heading, lidar_data, dtext):
+def particleFilter(parameters, state, dtext):
     prediction = (0,0,0)
-    dtext = list()
-
     if state == 'init':
         # Place initial particles
-        pf = alg.ParticleFilter(parameters, robot)
-        dtext.append("Place particles")
-        state = 'updateSimulation'
-        (done, nump, avgw, keep, prediction) = pf.pfData()
-
-
-
-
-    # Wait here until the robot sends data
-    heading, lidar_data = rw.getRobotData(parameters)
-    if state == 'addRobot':
-        print("Placing robot")
-        robot = rw.PlaceRobot(parameters)
-        dtext.append("Placing robot")
-        state = 'moveRobot'
-        current_object = robot
-    elif state == 'moveRobot':
-        print("Move robot")
-        if robot.valid_weight() == False:
-            robot.move()
-            dtext.append("Move robot to valid weight region")
-        else:
-            state = 'placeParticles'
-        current_object = robot
-    elif state == 'placeParticles':
-        print("Place particles")
-        current_object = pf
-    elif state == 'updateSimulation':
-        rw.updateRobot()
-        print("Iteration %d: robot(%d, %d)"%(iteration,robot.x,robot.y), end=" ")
-        (done, nump, avgw, keep, prediction) = pf.update()
-        current_object = pf
+        parameters['pfObject'] = alg.ParticleFilter(parameters)
+        dtext.append(("Place particles", True)) # Display to console and overlay
+        (done, nump, avgw, keep, prediction) = parameters['pfObject'].pfData()
     else:
-        print("!ERROR! Illegal state")
-        break
-
-    if type(current_obect) == alg.ParticleFilter:
-        fields = ["p=%d,%d"%(nump,keep), "wavg=%f"%avgw]
+        (done, nump, avgw, keep, prediction) = parameters['pfObject'].update()
+        dtext.append(("p=%d,%d"%(nump,keep), True))
+        dtext.append(("wavg=%2f"%avgw, True))
         if prediction[2] > 0:
-            fields.append("L=%d,%d"%(prediction[0],prediction[1]))
-        for field in fields:
-            print(field, end=" ")
-            dtext.append(field)
-
+            dtext.append(("L=%d,%d"%(prediction[0],prediction[1]), True))
+    return prediction

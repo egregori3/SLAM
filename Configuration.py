@@ -42,7 +42,7 @@ class Configuration:
                                                                  # for every 10 pixels, this should be 10
         # Simulated robot parameters
         parameters['robotDistBetUpdates']             = 21       # The simulated robot moves X pixels for each update
-        parameters['robotTurnAngle']                  = int(parameters['lidarSamples']/6)
+        parameters['robotTurnOffset']                 = int(parameters['lidarSamples']/4)
 
     def dump(self, parameters):
         print('Configuration')
@@ -60,6 +60,7 @@ class Configuration:
                 print("Graphics output enabled")
             if parameters['plotSamples']: 
                 print("Sample plotting output enabled")
+            print( "Initial weight threshold = %f"%parameters['initialWeightThres'])
         except KeyError:
             usage = True
         print()

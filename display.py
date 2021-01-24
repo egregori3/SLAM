@@ -32,9 +32,9 @@ class Display:
         self.__addText()
         if 'pfObject' in parms:
             self.__addParticles(parms['pfObject'], point)
-        if 'robotObject' in parms:
-            self.__addRobot(parms['robotObject'])
-            self.__addLine(parms['robotPath'])
+        if 'simulatedRobotPath' in parms:
+            self.__addRobot(parms['simulatedRobotPath'][-1])
+            self.__addLine(parms['simulatedRobotPath'])
         self.__saveImage(filename)
 
     def __colorMap(self, weight):
@@ -47,8 +47,8 @@ class Display:
             for i in range(len(points)-1):
                 cv2.line(self.__image,(points[i][0],points[i][1]),(points[i+1][0],points[i+1][1]),(128,128,128),2)
 
-    def __addRobot(self, robot):
-        cv2.circle(self.__image, (robot.x, robot.y), 6, self.robot_color, -1)
+    def __addRobot(self, robotxy):
+        cv2.circle(self.__image, robotxy, 6, self.robot_color, -1)
 
     def __addParticles(self, pf, point):
         # The robot mUST be the first particle because it needs to move first
@@ -61,7 +61,8 @@ class Display:
     def __addText(self,):
         text = ""
         for field in self.text_list:
-            text += (field+" ")
+            if field[1]:
+                text += (field[0]+" ")
         font = cv2.FONT_HERSHEY_SIMPLEX
         org = (self.textx, self.texty)
         fontScale = 1
