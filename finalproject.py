@@ -17,6 +17,7 @@
 import getopt
 import sys
 import os
+import time                         # Used for performance measuring
 import arena
 import display
 import DataLogger
@@ -97,9 +98,12 @@ def main(argv):
         print("Failure starting the server")
         sys.exit(-2)
     for iteration in range(parameters['iterations']):
+        start_time = time.perf_counter()
         dtext = [("Iteration %d"%iteration,False)] # Only output to console
         state = robot_server.getDataFromRobot(parameters, dtext)
         prediction = TrackingFilter.particleFilter(parameters, state, dtext)
+        elapsed_time = time.perf_counter() - start_time
+        dtext.append(("Time: %f"%elapsed_time,False))
         for field in dtext:
             print(field[0], end=" ")
         print()
