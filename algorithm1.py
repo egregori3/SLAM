@@ -25,7 +25,6 @@ import math
 #==============================================================================
 class ParticleFilter:
     def __init__(self, parms):
-        self.parms              = parms
         self.meas               = []
         self.particles          = []
         self.verbose            = parms['verbose']
@@ -37,24 +36,24 @@ class ParticleFilter:
         self.init_weight_thres  = parms['initialWeightThres']
 
         if 0:
-            p = model.Particle(self.parms, myid=1)
+            p = model.Particle(parms, myid=1)
             x,y = parms['simulatedRobotPath'][-1]
             p.place(x, y)
             self.particles.append(p)
         else:
-            self.__resetParticles()
+            self.__resetParticles(parms)
 
-    def __resetParticles(self):
+    def __resetParticles(self, parms):
         # For each valid region calculate a weight.
         print("Scanning valid regions")
-        tester = model.Particle(self.parms)
+        tester = model.Particle(parms)
         xy_list = self.__getXYByWeight(tester, self.init_weight_thres)
         print("Placing initial particles - weight > "+str(self.init_weight_thres))
         if self.numb_of_particles == 0:
             print("Number of particles set by algorithm")
             i = 0
             for (x,y) in xy_list:
-                p = model.Particle(self.parms, myid=i)
+                p = model.Particle(parms, myid=i)
                 i += 1
                 p.place(x,y)
                 self.particles.append(p)
@@ -119,15 +118,14 @@ class ParticleFilter:
 
     # move particles
     # return True to end simulation
-    def update(self):
+    def update(self, parms):
         # move particles
         for p in self.particles:
             p.move()
-        return self.pfData()
 
         # If the robot is in a deadzone, we do not have enough data to 
         # make a decision on how to place particles
-        if not self.robot.valid_weight(): return self.pfData()
+        if not parms['robotValidLidar']: return self.pfData()
 
         # refresh dead particles
         keepThreashold = 0.9
@@ -141,7 +139,7 @@ class ParticleFilter:
         if self.verbose: print("dump=%d"%(numdump), end=" ")
         if numkeep == 0:
             # if we do not have any good hypothesus (particles) we need to guess
-            self.__resetParticles()
+            self.__resetParticles(parms)
         else:
             # Place low weight particles next to high weight particles
             keep = 0

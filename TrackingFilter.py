@@ -14,7 +14,7 @@ def particleFilter(parameters, state, dtext):
         dtext.append(("Place particles", True)) # Display to console and overlay
         (done, nump, avgw, keep, prediction) = parameters['pfObject'].pfData()
     else:
-        (done, nump, avgw, keep, prediction) = parameters['pfObject'].update()
+        (done, nump, avgw, keep, prediction) = parameters['pfObject'].update(parameters)
         dtext.append(("p=%d,%d"%(nump,keep), True))
         dtext.append(("wavg=%2f"%avgw, True))
         if prediction[2] > 0:
