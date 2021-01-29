@@ -54,16 +54,18 @@ class Arena:
             return True
         return False
 
-    def readLidar(self, x, y, samples):
+    def readLidar(self, x, y, samples, max_dist=1000):
             # Measure distance while incrementing heading.
             # Start scan at robot heading.
+            if max_dist > self.lidar_max_distance:
+                max_dist = self.lidar_max_distance
             sample_count = self.lidar_samples
             s = int(self.parms['robotHeading']/((2 * math.pi)/self.lidar_samples))
             valid = False
             zcount = 0
             for r in range(sample_count):
                 i = (r+s) % self.lidar_samples
-                for d in range(self.lidar_max_distance):
+                for d in range(max_dist):
                     (xa,ya) = self.scan_points[i][d]
                     if self.CheckXY(x+xa,y+ya):
                         valid = True
@@ -115,7 +117,7 @@ class Arena:
             for d in range(self.lidar_max_distance):
                 x = d * math.cos(scan_angle)
                 y = d * math.sin(scan_angle)
-                self.scan_points[s][d] = (int(x),int(y))
+                self.scan_points[s][d] = (int(round(x)),int(round(y)))
             scan_angle = scan_angle + angle_adder
 
     # If any portion of the region is valid, add it to self.valid_regions

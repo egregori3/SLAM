@@ -66,7 +66,8 @@ class Particle:
         def move(self):
             collision = False
             for i in range(self.parms['robotDistance']):
-                self.valid_lidar = self.arena.readLidar(self.x, self.y, self.samples) # Update Lidar after placement
+                self.valid_lidar = self.arena.readLidar(self.x, self.y, 
+                        self.samples, max_dist=3) # Update Lidar after placement
                 if self.samples[0] <= 1:
                     collision = True
                     break
