@@ -26,20 +26,20 @@ class Arena:
 
     def __init__(self, parameters):
         print("Loading arena: ", parameters['arenaFilename'])
-        self.__image            = cv2.imread(parameters['arenaFilename'])
-        self.lidar_max_distance = parameters['lidarMaxDistance']
-        self.lidar_samples      = parameters['lidarSamples']
-        self.parms              = parameters
+        self.__image                = cv2.imread(parameters['arenaFilename'])
         try:
-            height, width, channels = self.__image.shape
-            self.width = width
-            self.height = height
-            parameters['arenaHeight'] = height
-            parameters['arenaWidth']  = width
-            self.region = parameters['arenaRegion']
-            print("height = %d, width = %d, channels = %d" % (height, width, channels))
-        except Exception as e:
-            print("Failure loading arena: "+e)
+            height, width, channels     = self.__image.shape
+        except:
+            raise Exception("Arena file not found")
+        self.lidar_max_distance     = parameters['lidarMaxDistance']
+        self.lidar_samples          = parameters['lidarSamples']
+        self.parms                  = parameters
+        self.width                  = width
+        self.height                 = height
+        parameters['arenaHeight']   = height
+        parameters['arenaWidth']    = width
+        self.region                 = parameters['arenaRegion']
+        print("height = %d, width = %d, channels = %d" % (height, width, channels))
         self.__createValidRegions(parameters)
         self.__createLidarScan(parameters)
 
@@ -65,7 +65,7 @@ class Arena:
             zcount = 0
             for r in range(sample_count):
                 i = (r+s) % self.lidar_samples
-                for d in range(max_dist):
+                for d in range(1,max_dist):
                     (xa,ya) = self.scan_points[i][d]
                     if self.CheckXY(x+xa,y+ya):
                         valid = True

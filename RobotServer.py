@@ -90,19 +90,27 @@ class RobotServer:
             update_dist                     = parms['robotDistBetUpdates']
             lidar_data                      = parms['robotLidarData']
             x,y                             = parms['simulatedRobotPath'][-1]
-            valid                           = self.arena.readLidar(x, y, lidar_data)
-            if lidar_data[0] < update_dist/2:
+            valid                           = self.arena.readLidar(x, y, lidar_data, 4)
+            if lidar_data[0] <= 1:
                 dtext.append(("New heading", False))
+                valid                       = self.arena.readLidar(x, y, lidar_data)
                 self.__setNewHeading(parms, lidar_data, update_dist, dtext)
+            # try to move
+            for step in range(update_dist):
+                tx = x + step * math.cos(parms['robotHeading'])
+                ty = y + step * math.sin(parms['robotHeading'])
+                valid = self.arena.readLidar(tx, ty, lidar_data, 4)
+                if lidar_data[0] <= 1:
+                    break
+            x = tx
+            y = ty
             valid                           = self.arena.readLidar(x, y, lidar_data)
-            step = min(lidar_data[0]-3, update_dist)
-            if step < 0: raise Exception("Negative Step")
-            x += step * math.cos(parms['robotHeading'])
-            y += step * math.sin(parms['robotHeading'])
-            parms['robotDistance']          = step
+            parms['robotDistance']          = int(round(random.normalvariate(step, \
+                                                parms['distanceSigmaNoise'])))
             dtext.append(("sr=%d,%d" % (int(x), int(y)), True)) # Display to console and overlay
             parms['simulatedRobotPath'].append((int(x), int(y)))
-            parms['robotValidLidar']        = self.arena.readLidar(int(x), int(y), parms['robotLidarData'])
+            parms['robotValidLidar']        = self.arena.readLidar(int(x), int(y), \
+                                                parms['robotLidarData'])
             return 'update'
 
     def __setNewHeading(self, parms, lidar_data, update_dist, dtext):
@@ -115,7 +123,7 @@ class RobotServer:
             if lidar_data[-i] > update_dist:
                 heading = self.__angletrunc(parms['robotHeading'] - (2+i)*turn_angle)
                 break
-        parms['robotHeading'] = heading
+        parms['robotHeading'] = random.normalvariate(heading,parms['headingSigmaNoise'])
 
     # Truncate angle - from robot class
     def __angletrunc(self,a):

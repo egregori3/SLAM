@@ -17,6 +17,7 @@
 import random
 import LidarBotModel as model
 import math
+import time                         # Used for performance measuring
 
 #==============================================================================
 #
@@ -118,10 +119,13 @@ class ParticleFilter:
 
     # move particles
     # return True to end simulation
-    def update(self, parms):
+    def update(self, parms, dtext):
         # move particles
+        start_time = time.perf_counter()
         for p in self.particles:
             p.move()
+        elapsed_time = time.perf_counter() - start_time
+        dtext.append(("MT:%f"%elapsed_time,False))
 
         # If the robot is in a deadzone, we do not have enough data to 
         # make a decision on how to place particles
@@ -141,6 +145,7 @@ class ParticleFilter:
             # if we do not have any good hypothesus (particles) we need to guess
             self.__resetParticles(parms)
         else:
+            start_time = time.perf_counter()
             # Place low weight particles next to high weight particles
             keep = 0
             dump = 0
@@ -171,6 +176,9 @@ class ParticleFilter:
                     # We have assigne 10 dump particles to each keep particle but we have
                     # extra dump particles
                     k = 0
+
+        elapsed_time = time.perf_counter() - start_time
+        dtext.append(("PT:%f"%elapsed_time,False))
         return self.pfData(keep=len(keep_particles), prediction=self.__predict(keep_particles))
 
     def __avgWeight(self):

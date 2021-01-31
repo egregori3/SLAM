@@ -85,7 +85,11 @@ def main(argv):
         usage()
 
     print("Initializing arena")
-    parameters['arena'] = arena.Arena(parameters)
+    try:
+        parameters['arena'] = arena.Arena(parameters)
+    except Exception as e:
+        print("Failure loading arena: "+str(e))
+        usage()
 
     datalogger_object = DataLogger.DataLogger()
     if 'dataFilename' in parameters:
@@ -103,7 +107,7 @@ def main(argv):
         state = robot_server.getDataFromRobot(parameters, dtext)
         prediction = TrackingFilter.particleFilter(parameters, state, dtext)
         elapsed_time = time.perf_counter() - start_time
-        dtext.append(("Time: %f"%elapsed_time,False))
+        dtext.append(("TT:%f"%elapsed_time,False))
         for field in dtext:
             print(field[0], end=" ")
         print()
