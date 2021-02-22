@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 class DataLogger:
 
     def startDataLogger(self, parms):
-        self.fp = open(self.parms[dataFilename], "w")
+        self.fp = open(parms['dataFilename'], "w")
         fp.write("rx, ry, ")
 
     def plotSamples(self, parms, filename):

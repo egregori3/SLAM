@@ -1,7 +1,7 @@
 import math
 import random
 import LidarBotModel as model
-import algorithm1 as alg
+import Algorithm as alg
 
 #==============================================================================
 # Tracking Filter

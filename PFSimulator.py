@@ -18,8 +18,8 @@ import getopt
 import sys
 import os
 import time                         # Used for performance measuring
-import arena
-import display
+import Arena
+import Display
 import DataLogger
 import TrackingFilter
 import Configuration as Config
@@ -86,7 +86,7 @@ def main(argv):
 
     print("Initializing arena")
     try:
-        parameters['arena'] = arena.Arena(parameters)
+        parameters['arena'] = Arena.Arena(parameters)
     except Exception as e:
         print("Failure loading arena: "+str(e))
         usage()
@@ -113,7 +113,7 @@ def main(argv):
         print()
         if parameters['plotGraphics']:
             filename = parameters['outputPath']+"/iteration" + str(iteration)
-            display.Display(parameters, filename, dtext, prediction)
+            Display.Display(parameters, filename, dtext, prediction)
         if parameters['plotSamples']:
             self.datalogger_object.plotSamples(parameters, parameters['outputPath']+"/lidar" + str(iteration))
 
