@@ -15,7 +15,7 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import math
-# import random
+import random
 import numpy as np
 
 #==============================================================================
@@ -65,15 +65,16 @@ class Particle:
         # After moving, the weight is valid
         def move(self):
             collision = False
-            for i in range(self.parms['robotDistance']):
+            for i in range(round(random.gauss(self.parms['robotDistance'], self.distanceNoise))):
                 self.valid_lidar = self.arena.readLidar(self.x, self.y, 
                         self.samples, max_dist=3) # Update Lidar after placement
                 if self.samples[0] <= 1:
                     collision = True
                     break
                 # no collision
-                self.x += math.cos(self.parms['robotHeading'])
-                self.y += math.sin(self.parms['robotHeading'])
+                heading = random.gauss(self.parms['robotHeading'], self.headingNoise)
+                self.x += math.cos(heading)
+                self.y += math.sin(heading)
             self.x = int(self.x)
             self.y = int(self.y)
             self.__setWeight()
