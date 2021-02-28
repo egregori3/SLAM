@@ -50,15 +50,14 @@ class ParticleFilter:
         tester = model.Particle(parms)
         xy_list = self.__getXYByWeight(tester, self.init_weight_thres)
         print("Placing initial particles - weight > "+str(self.init_weight_thres))
-        if self.numb_of_particles == 0:
-            print("Number of particles set by algorithm")
-            i = 0
-            for (x,y) in xy_list:
-                p = model.Particle(parms, myid=i)
-                i += 1
-                p.place(x,y)
-                self.particles.append(p)
-                print("*", end="", flush=True)
+        i = 0
+        for (x,y) in xy_list:
+            p = model.Particle(parms, myid=i)
+            i += 1
+            p.place(x,y)
+            self.particles.append(p)
+            print("*", end="", flush=True)
+            if self.numb_of_particles and i >= self.numb_of_particles: break
         print()
         print("Placed %d particles"%len(self.particles))
 
