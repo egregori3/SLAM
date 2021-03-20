@@ -33,7 +33,7 @@ import RobotServer as rs
 def usage():
     print("!ERROR! Illegal parameter")
     print("Required: -a arenaFilename -i iterations ")
-    print("Optional strings:  [-o outputPath] [-d dataFilename] [-m plot samples] [-s server IP]")
+    print("Optional strings:  [-o outputPath] [-d dataFilename] [-m plot samples] [-c lcm channel]")
     print("Optional ints: [-x -y -h Initial robot position] [-w Initial weight threshold] [-p numberOfParticles]")
     print("Optional Flags: [-v verbose] [-g output graphics]")
     print("-o must be specified with -d")
@@ -50,7 +50,7 @@ def main(argv):
     parameters = dict()
     config = Config.Configuration(parameters)
     try:
-        opts, args = getopt.getopt(argv, "vgi:o:a:d:p:m:x:y:h:w:s:")
+        opts, args = getopt.getopt(argv, "vgi:o:a:d:p:m:x:y:h:w:s:c:")
     except getopt.GetoptError:
         usage()
     for opt, arg in opts:
@@ -66,8 +66,8 @@ def main(argv):
             parameters['arenaFilename']     = arg
         elif opt in ("-d"):
             parameters['dataFilename']      = arg
-        elif opt in ("-s"):
-            parameters['serverIP']          = arg           # Server IP address fro getting data from robot
+        elif opt in ("-c"):
+            parameters['lcmChannel']        = arg           # lcm channel
         elif opt in ("-i"):
             parameters['iterations']        = int(arg)      # Number of times the robot is moved
         elif opt in ("-p"):

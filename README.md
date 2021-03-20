@@ -2,6 +2,16 @@
 pip install opencv-python  
 pip install matplotlib  
 
+# Installing lcm
+https://lcm-proj.github.io/build_instructions.html, 
+the reason being that it defaulted to installing for python (Python 2) but not for python3. 
+setup.py has to be called from python3 install LCM for python3 as well, 
+so after having installed LCM according to the instructions on https://lcm-proj.github.io/build_instructions.html
+cd ../lcm-python
+python3 setup.py install
+
+Run the same thing within an activated Conda environment.
+
 
 # Executing the simulation
 $ python PFSimulator.py  

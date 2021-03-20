@@ -1,0 +1,10 @@
+package sensorlcm;
+
+struct sensors_t
+{
+    int32_t  id;
+    double   orientation; 
+    int32_t  distance;
+    double   ranges[720];
+}
+

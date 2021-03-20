@@ -16,23 +16,35 @@
 
 import random
 import math
+import lcm
 import LidarBotModel as model
+from sensorlcm import sensors_t
 
 class RobotServer:
     def __init__(self, parms):
         self.arena                   = parms['arena']
         parms['robotLidarData']      = [0] * parms['lidarSamples']  # List of samples representing distances
-        if 'serverIP' in parms:
+        self.robot_on                = False
+        if 'lcmChannel' in parms:
             self.get_robot_data      = self.__getDataFromRealRobot
-            print("Connecting to server: "+parms['serverIP'])
+            print("Listening on LCM channel: "+parms['lcmChannel'])
+            self.lc = lcm.LCM()
+            subscription = self.lc.subscribe(parms['lcmChannel'], self.__lcmSensorHandler)
         else:
             print("Using simulated robot")
             self.turn_offset         = parms['robotTurnOffset']
             self.get_robot_data      = self.__getDataFromSimulatedRobot
-            self.robot_on            = False
 
     def start(self, parameters):
         return 0
+
+    def __lcmSensorHandler(self, channel, data):
+        msg = sensors_t.decode(data)
+        print("Received message on channel \"%s\"" % channel)
+        self.robot_heading  = msg.orientation
+        self.robot_distance = msg.distance
+        self.robot_lidar    = msg.ranges
+        self.robot_msg_id   = msg.id
 
     #==============================================================================
     #
@@ -51,8 +63,18 @@ class RobotServer:
     def getDataFromRobot(self, parameters, dtext):
         return self.get_robot_data(parameters, dtext)
 
-    def __getDataFromRealRobot(self, parameters, dtext):
-        pass
+    def __getDataFromRealRobot(self, parms, dtext):
+        self.lc.handle()
+        print("Waiting for data from robot")
+        parms['robotHeading']    = self.robot_heading
+        parms['robotDistance']   = self.robot_distance
+        parms['robotValidLidar'] = self.robot_lidar
+        dtext.append(("id=%d" % (self.robot_msg_id), True)) # Display to console and overlay
+        if self.robot_on == False:
+            self.robot_on = True
+            return 'init'
+        else:
+            return 'update'
 
     def __getDataFromSimulatedRobot(self, parms, dtext):
         if self.robot_on == False:
